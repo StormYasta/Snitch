@@ -192,21 +192,16 @@ def get_deputado_temporal(
     """
     serie = defaultdict(lambda: {"votos": 0, "eventos": 0, "proposicoes": 0})
 
-    # Mapeamento oficial de legislaturas para intervalos de datas
-    LEG_INTERVALS = {
-        57: ("2023-02-01", "2027-01-31"),
-        56: ("2019-02-01", "2023-01-31"),
-        55: ("2015-02-01", "2019-01-31"),
-        54: ("2011-02-01", "2015-01-31"),
-    }
-
     inicio_filtro = None
     fim_filtro = None
     if ano:
         inicio_filtro = f"{ano}-01-01"
         fim_filtro = f"{ano}-12-31"
-    elif legislatura and legislatura in LEG_INTERVALS:
-        inicio_filtro, fim_filtro = LEG_INTERVALS[legislatura]
+    elif legislatura:
+        leg = db.query(Legislatura).filter(Legislatura.numero == legislatura).first()
+        if leg:
+            inicio_filtro = str(leg.data_inicio)[:10] if leg.data_inicio else None
+            fim_filtro = str(leg.data_fim)[:10] if leg.data_fim else None
 
     def in_range(date_str: str) -> bool:
         if not date_str:
