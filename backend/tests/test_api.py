@@ -149,3 +149,49 @@ def test_governo_structure_and_institution_detail(client):
     if camara.get("sigla") == "CD":
         assert detail["integrado"] is True
         assert detail["estatisticas_camara"] is not None
+
+
+def test_comparativo_validacao(client):
+    deps = client.get("/api/deputados?page_size=3").json()["items"]
+    first, second = deps[0]["id"], deps[1]["id"]
+    assert client.get("/api/comparativo/deputados", params={"ids": str(first)}).status_code == 422
+    assert client.get("/api/comparativo/deputados", params={"ids": f"{first},{first}"}).status_code == 422
+    assert client.get("/api/comparativo/deputados", params={"ids": f"{first},{second},3,4"}).status_code == 422
+    assert client.get("/api/comparativo/deputados", params={"ids": f"{first},99999999"}).status_code == 404
+
+
+def test_comparativo_metricas_e_radar(client):
+    deps = client.get("/api/deputados?page_size=3").json()["items"]
+    ids = [deps[0]["id"], deps[1]["id"]]
+    response = client.get("/api/comparativo/deputados", params={"ids": ",".join(map(str, ids)), "ano": 2025})
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert [item["deputado"]["id"] for item in data["deputados"]] == ids
+    assert data["ano"] == 2025
+    assert "nota_metodologica" in data
+
+    for item in data["deputados"]:
+        counts = item["votos"]
+        activity = item["atividade"]
+        assert activity["votos_registrados"] == sum(counts.values())
+        assert activity["votacoes_distintas"] <= activity["votos_registrados"]
+        for tema in item["temas"]:
+            assert tema["total_sim_nao"] == tema["sim"] + tema["nao"]
+            assert tema["total_registrado"] == sum(tema[k] for k in ("sim","nao","abstencao","obstrucao","outros"))
+            if tema["total_sim_nao"]:
+                assert abs(tema["percentual_sim"] + tema["percentual_nao"] - 100) < 0.2
+            else:
+                assert tema["percentual_sim"] is None
+
+
+def test_comparativo_votacoes_comuns(client):
+    deps = client.get("/api/deputados?page_size=3").json()["items"]
+    ids = [deps[0]["id"], deps[1]["id"]]
+    res = client.get("/api/comparativo/votacoes", params={"ids": ",".join(map(str, ids)), "ano": 2025, "page_size": 2})
+    assert res.status_code == 200, res.text
+    payload = res.json()
+    assert payload["page_size"] == 2
+    assert payload["total_pages"] >= 1
+    for votacao in payload["items"]:
+        assert set(votacao["votos"]) == set(map(str, ids))
+        assert all(value != "Sem registro" for value in votacao["votos"].values())

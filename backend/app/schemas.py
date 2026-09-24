@@ -124,6 +124,67 @@ class DeputadoVotoItem(BaseModel):
     proposicao_ano: Optional[int] = None
     proposicao_ementa: Optional[str] = None
 
+
+# ==================== COMPARATIVO DE DEPUTADOS ====================
+
+class ComparativoParlamentar(BaseModel):
+    id: int
+    nome_parlamentar: str
+    sigla_partido: Optional[str] = None
+    uf: Optional[str] = None
+    url_foto: Optional[str] = None
+    dados_demonstrativos: bool = False
+
+class ComparativoAtividade(BaseModel):
+    votos_registrados: int
+    votacoes_distintas: int
+    dias_com_atividade: int
+    presencas_eventos: int
+    proposicoes_autoria: int
+
+class ComparativoVotos(BaseModel):
+    sim: int = 0
+    nao: int = 0
+    abstencao: int = 0
+    obstrucao: int = 0
+    outros: int = 0
+
+class ComparativoTema(BaseModel):
+    id: int
+    nome: str
+    sim: int = 0
+    nao: int = 0
+    abstencao: int = 0
+    obstrucao: int = 0
+    outros: int = 0
+    total_registrado: int = 0
+    total_sim_nao: int = 0
+    percentual_sim: Optional[float] = None
+    percentual_nao: Optional[float] = None
+
+class ComparativoDeputado(BaseModel):
+    deputado: ComparativoParlamentar
+    atividade: ComparativoAtividade
+    votos: ComparativoVotos
+    temas: list[ComparativoTema] = []
+
+class ComparativoResponse(BaseModel):
+    ano: int
+    legislatura: Optional[int] = None
+    ultima_sincronizacao: Optional[datetime] = None
+    deputados: list[ComparativoDeputado]
+    nota_metodologica: str
+
+class VotacaoComparada(BaseModel):
+    id: int
+    camara_id: str
+    data_hora: Optional[str] = None
+    descricao: str
+    uri: Optional[str] = None
+    proposicao_id: Optional[int] = None
+    proposicao_nome: Optional[str] = None
+    votos: dict[str, str]
+
 # ==================== PROPOSICOES ====================
 
 class ProposicaoSimple(BaseModel):

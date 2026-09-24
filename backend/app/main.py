@@ -6,7 +6,7 @@ from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.models import Deputado
 from app.data.seed_data import load_seed_data
-from app.routers import deputados, proposicoes, votacoes, stats, busca, governo
+from app.routers import deputados, proposicoes, votacoes, stats, busca, governo, comparativo
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -52,6 +52,7 @@ app.include_router(proposicoes.router)
 app.include_router(votacoes.router)
 app.include_router(busca.router)
 app.include_router(governo.router)
+app.include_router(comparativo.router)
 
 @app.get("/api/health", tags=["Health"])
 def health_check():
