@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Search, Building2, FileText, Users, Home, Menu, X } from 'lucide-react';
+import { Search, Building2, FileText, Users, Home, Menu, X, Network } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +56,10 @@ export const Navbar: React.FC = () => {
             <NavLink to="/deputados" className={navLinkClass}>
               <Users className="w-4 h-4" />
               Deputados
+            </NavLink>
+            <NavLink to="/governo" className={navLinkClass}>
+              <Network className="w-4 h-4" />
+              Entenda o Governo
             </NavLink>
           </nav>
 
@@ -128,6 +132,14 @@ export const Navbar: React.FC = () => {
             >
               <Users className="w-4 h-4" />
               Deputados
+            </NavLink>
+            <NavLink
+              to="/governo"
+              onClick={() => setMobileMenuOpen(false)}
+              className={navLinkClass}
+            >
+              <Network className="w-4 h-4" />
+              Entenda o Governo
             </NavLink>
           </div>
         </div>
