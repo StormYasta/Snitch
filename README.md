@@ -13,9 +13,13 @@ A aplicação não produz ranking político, nota de produtividade, avaliação 
 
 ## Fontes
 
+A aplicação possui uma tela pública em `/fontes` com links, finalidade de uso e data de acesso de cada fonte catalogada.
+
+Fontes primárias:
 - Câmara dos Deputados — Dados Abertos API v2
+- Câmara dos Deputados — WebService de presença parlamentar em Plenário
 - SIORG — Estruturas Organizacionais do Poder Executivo Federal
-- Constituição Federal e páginas institucionais oficiais para a estrutura constitucional de alto nível
+- Constituição Federal, além das páginas institucionais oficiais usadas na estrutura constitucional de alto nível
 
 Os dados demonstrativos de `backend/app/data/seed_data.py` existem apenas para testes e desenvolvimento. Eles **não são carregados por padrão** e não devem ser tratados como dados oficiais.
 
@@ -117,6 +121,7 @@ O seed contém fixtures demonstrativas e deve permanecer separado de bases usada
 /deputados/:id
 /governo
 /governo/instituicoes/:id
+/fontes
 ```
 
 ### API
