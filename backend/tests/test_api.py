@@ -1,3 +1,6 @@
+import os
+os.environ["LOAD_DEMO_SEED"] = "true"
+
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
