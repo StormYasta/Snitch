@@ -7,6 +7,9 @@ from app.services.camara.deputados_service import DeputadosService
 from app.services.camara.proposicoes_service import ProposicoesService
 from app.services.camara.votacoes_service import VotacoesService
 from app.services.camara.eventos_service import EventosService
+from app.services.camara.historico_service import HistoricoService
+from app.services.siorg.estrutura_service import EstruturaService
+from app.services.siorg.orgaos_service import OrgaosService
 from app.data.seed_data import load_seed_data
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -51,6 +54,32 @@ def run_sync(tipo: str):
             service = EventosService()
             total_processados += service.sync_eventos(db)
 
+        elif tipo in ["legislaturas"]:
+            service = HistoricoService()
+            total_processados += service.sync_legislaturas(db)
+
+        elif tipo in ["deputados_historicos"]:
+            service = HistoricoService()
+            total_processados += service.sync_legislaturas(db)
+            total_processados += service.sync_deputados_historicos(db)
+            total_processados += service.enrich_current_deputies(db)
+
+        elif tipo in ["estrutura_governo"]:
+            total_processados += EstruturaService().sync_estrutura_canonica(db)
+
+        elif tipo in ["siorg"]:
+            total_processados += EstruturaService().sync_estrutura_canonica(db)
+            total_processados += OrgaosService().sync_orgaos_executivo(db, use_live_siorg=True)
+
+        elif tipo in ["mvp2"]:
+            logger.info("Sincronizando segunda etapa do MVP...")
+            hist = HistoricoService()
+            total_processados += hist.sync_legislaturas(db)
+            total_processados += hist.sync_deputados_historicos(db)
+            total_processados += hist.enrich_current_deputies(db)
+            total_processados += EstruturaService().sync_estrutura_canonica(db)
+            total_processados += OrgaosService().sync_orgaos_executivo(db, use_live_siorg=True)
+
         elif tipo in ["all"]:
             logger.info("Iniciando sincronização completa...")
             try:
@@ -71,7 +100,11 @@ def run_sync(tipo: str):
                 total_processados = sum(res.values())
 
         else:
-            raise ValueError(f"Comando de sincronização desconhecido: '{tipo}'. Use: deputados, proposicoes, votacoes, eventos, all ou seed.")
+            raise ValueError(
+                f"Comando de sincronização desconhecido: '{tipo}'. "
+                "Use: deputados, proposicoes, votacoes, eventos, legislaturas, "
+                "deputados_historicos, estrutura_governo, siorg, mvp2, all ou seed."
+            )
 
         sync_run.status = "SUCCESS"
         sync_run.finalizado_em = utc_now()
