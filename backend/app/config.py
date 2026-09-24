@@ -12,6 +12,7 @@ class Settings(BaseSettings):
         "https://estruturaorganizacional.dados.gov.br/doc/estrutura-organizacional/completa.json"
     )
     siorg_timeout: float = float(os.getenv("SIORG_TIMEOUT", "15.0"))
+    load_demo_seed: bool = os.getenv("LOAD_DEMO_SEED", "false").lower() in ("1", "true", "yes")
     cors_origins: list[str] = ["*"]
 
     class Config:
