@@ -5,14 +5,17 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 
-client = TestClient(app)
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
 
-def test_health():
+def test_health(client):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-def test_stats():
+def test_stats(client):
     response = client.get("/api/stats")
     assert response.status_code == 200
     data = response.json()
@@ -23,7 +26,7 @@ def test_stats():
     assert data["total_deputados"] > 0
     assert data["total_proposicoes"] > 0
 
-def test_list_deputados():
+def test_list_deputados(client):
     response = client.get("/api/deputados?page=1&page_size=5")
     assert response.status_code == 200
     data = response.json()
@@ -31,7 +34,7 @@ def test_list_deputados():
     assert len(data["items"]) > 0
     assert data["items"][0]["nome_parlamentar"] is not None
 
-def test_deputado_detail_and_activity():
+def test_deputado_detail_and_activity(client):
     # Pega primeiro deputado
     deps = client.get("/api/deputados").json()["items"]
     dep_id = deps[0]["id"]
@@ -63,7 +66,7 @@ def test_deputado_detail_and_activity():
     votos_res = client.get(f"/api/deputados/{dep_id}/votos")
     assert votos_res.status_code == 200
 
-def test_list_proposicoes_and_detail():
+def test_list_proposicoes_and_detail(client):
     response = client.get("/api/proposicoes")
     assert response.status_code == 200
     props = response.json()["items"]
@@ -77,7 +80,7 @@ def test_list_proposicoes_and_detail():
     assert "tramitacoes" in det
     assert "votacoes" in det
 
-def test_votacao_detail_and_votos():
+def test_votacao_detail_and_votos(client):
     # Pega votações
     stats = client.get("/api/stats").json()
     vot_id = stats["votacoes_recentes"][0]["id"]
@@ -93,7 +96,7 @@ def test_votacao_detail_and_votos():
     assert "items" in votos_data
     assert len(votos_data["items"]) > 0
 
-def test_global_search():
+def test_global_search(client):
     # Procura proposição
     res_prop = client.get("/api/busca?q=1234")
     assert res_prop.status_code == 200
@@ -106,7 +109,7 @@ def test_global_search():
 
 
 
-def test_legislaturas_and_trajetoria():
+def test_legislaturas_and_trajetoria(client):
     legs_res = client.get("/api/legislaturas")
     assert legs_res.status_code == 200
     legs = legs_res.json()
@@ -123,7 +126,7 @@ def test_legislaturas_and_trajetoria():
     assert "timeline" in traj
 
 
-def test_governo_structure_and_institution_detail():
+def test_governo_structure_and_institution_detail(client):
     structure_res = client.get("/api/governo/estrutura")
     assert structure_res.status_code == 200
     structure = structure_res.json()
