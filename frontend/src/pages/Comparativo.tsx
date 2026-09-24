@@ -16,7 +16,7 @@ import {
 import { Avatar } from '../components/Avatar';
 import type {
   ComparativoDeputado, ComparativoFiltro, ComparativoParlamentar,
-  ComparativoResponse, DeputadoIndicadores,
+  DeputadoIndicadores,
 } from '../types';
 
 const currentYear = new Date().getFullYear();
@@ -551,8 +551,8 @@ export function Comparativo() {
     enabled: ready,
     staleTime: 5 * 60 * 1000,
   });
-  const indicators = Object.fromEntries((remote || []).map((item) => [item.id, item.data]))
-    as Record<number, DeputadoIndicadores | null>;
+  const indicators: Record<number, DeputadoIndicadores | null> =
+    Object.fromEntries((remote || []).map((item) => [item.id, item.data]));
   const selected = ids.map((id) => {
     const present = data?.deputados.find((entry) => entry.deputado.id === id)?.deputado;
     const profile = profiles?.find((entry) => entry.id === id);
