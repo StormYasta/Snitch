@@ -115,8 +115,8 @@ def obter_comparativo(
             dias[voto.deputado_id].add(dia)
 
     participacoes = Counter()
-    for dep_id, inicio in (
-        db.query(EventoDeputado.deputado_id, Evento.data_inicio)
+    for dep_id, _evento_id, inicio in (
+        db.query(EventoDeputado.deputado_id, Evento.id, Evento.data_inicio)
         .join(Evento, Evento.id == EventoDeputado.evento_id)
         .filter(
             EventoDeputado.deputado_id.in_(ids),
