@@ -100,3 +100,46 @@ def test_global_search():
     res_dep = client.get("/api/busca?q=Tabata")
     assert res_dep.status_code == 200
     assert len(res_dep.json()["deputados"]) > 0
+
+
+
+def test_legislaturas_and_trajetoria():
+    legs_res = client.get("/api/legislaturas")
+    assert legs_res.status_code == 200
+    legs = legs_res.json()
+    assert isinstance(legs, list)
+    assert len(legs) > 0
+
+    deps = client.get("/api/deputados?page=1&page_size=1").json()["items"]
+    dep_id = deps[0]["id"]
+    traj_res = client.get(f"/api/deputados/{dep_id}/trajetoria")
+    assert traj_res.status_code == 200
+    traj = traj_res.json()
+    assert traj["deputado_id"] == dep_id
+    assert "mandatos" in traj
+    assert "timeline" in traj
+
+
+def test_governo_structure_and_institution_detail():
+    structure_res = client.get("/api/governo/estrutura")
+    assert structure_res.status_code == 200
+    structure = structure_res.json()
+    assert len(structure["nodes"]) > 0
+    assert "legenda" in structure
+
+    search_res = client.get("/api/governo/busca?q=Câmara")
+    assert search_res.status_code == 200
+    results = search_res.json()
+    assert len(results) > 0
+
+    camara = next(
+        (item for item in results if item.get("sigla") == "CD" or "Câmara dos Deputados" in item.get("nome", "")),
+        results[0],
+    )
+    detail_res = client.get(f"/api/governo/instituicoes/{camara['id']}")
+    assert detail_res.status_code == 200
+    detail = detail_res.json()
+    assert "relacoes" in detail
+    if camara.get("sigla") == "CD":
+        assert detail["integrado"] is True
+        assert detail["estatisticas_camara"] is not None
