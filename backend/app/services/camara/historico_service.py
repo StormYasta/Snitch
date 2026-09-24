@@ -113,7 +113,9 @@ class HistoricoService:
         if legislatura_max is not None:
             legs_query = legs_query.filter(Legislatura.numero <= legislatura_max)
 
-        legislaturas = legs_query.order_by(Legislatura.numero.desc()).all()
+        # Processa da mais antiga para a mais recente para que o registro principal
+        # da pessoa termine refletindo sua participação parlamentar mais recente.
+        legislaturas = legs_query.order_by(Legislatura.numero.asc()).all()
         if not legislaturas:
             logger.warning("Nenhuma legislatura disponível para a carga histórica.")
             return 0
