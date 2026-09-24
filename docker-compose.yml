@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: snitch_db
+    environment:
+      POSTGRES_USER: snitch
+      POSTGRES_PASSWORD: snitch_password
+      POSTGRES_DB: snitch_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U snitch -d snitch_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: snitch_backend
+    environment:
+      - DATABASE_URL=postgresql://snitch:snitch_password@db:5432/snitch_db
+      - CAMARA_API_URL=https://dadosabertos.camara.leg.br/api/v2
+      - CAMARA_TIMEOUT=10.0
+      - CAMARA_MAX_RETRIES=3
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: snitch_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
