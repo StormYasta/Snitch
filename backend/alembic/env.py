@@ -16,8 +16,11 @@ if config.config_file_name is not None:
 
 from app.database import Base
 from app.models import (
-    Deputado, DeputadoHistorico, Proposicao, ProposicaoAutor, Tema, ProposicaoTema,
-    Tramitacao, Votacao, VotacaoProposicao, VotacaoOrientacao, Voto, Evento, EventoDeputado, SyncRun
+    Deputado, DeputadoHistorico, Legislatura, Mandato, FiliacaoPartidaria,
+    Proposicao, ProposicaoAutor, Tema, ProposicaoTema,
+    Tramitacao, Votacao, VotacaoProposicao, VotacaoOrientacao, Voto,
+    Evento, EventoDeputado, Instituicao, RelacaoInstitucional,
+    Cargo, OcupacaoCargo, SyncRun
 )
 from app.config import settings
 
