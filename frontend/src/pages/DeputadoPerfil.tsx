@@ -13,7 +13,7 @@ import {
 import {
   getDeputado, getDeputadoAtividade, getDeputadoTemporal,
   getDeputadoDistribuicao, getDeputadoVotos, getDeputadoProposicoes,
-  getDeputadoHistorico
+  getDeputadoHistorico, getDeputadoTrajetoria
 } from '../api/client';
 import { Avatar } from '../components/Avatar';
 import { VoteBadge, StatusBadge } from '../components/Badge';
@@ -72,6 +72,12 @@ export const DeputadoPerfil: React.FC = () => {
   const { data: historico } = useQuery({
     queryKey: ['deputadoHistorico', depId],
     queryFn: () => getDeputadoHistorico(depId),
+    enabled: !isNaN(depId),
+  });
+
+  const { data: trajetoria } = useQuery({
+    queryKey: ['deputadoTrajetoria', depId],
+    queryFn: () => getDeputadoTrajetoria(depId),
     enabled: !isNaN(depId),
   });
 
@@ -430,8 +436,15 @@ export const DeputadoPerfil: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="self-end md:self-center shrink-0">
+                <div className="self-end md:self-center shrink-0 text-right">
                   <VoteBadge tipo={v.tipo_voto} />
+                  {(v.sigla_partido_momento || v.uf_momento) && (
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      {v.sigla_partido_momento || 'Partido não informado'}
+                      {v.uf_momento ? ` • ${v.uf_momento}` : ''}
+                      {' '}na data do voto
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -516,7 +529,45 @@ export const DeputadoPerfil: React.FC = () => {
         )}
       </section>
 
-      {/* 16. HISTÓRICO PARLAMENTAR */}
+      {/* 16. TRAJETÓRIA PARLAMENTAR */}
+      {trajetoria && trajetoria.mandatos.length > 0 && (
+        <section className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs space-y-5">
+          <div className="flex items-center gap-2">
+            <History className="w-5 h-5 text-slate-700" />
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Trajetória Parlamentar</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Mandatos preservados por legislatura; partido e UF são apresentados no contexto registrado para cada período.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {trajetoria.mandatos.map((m) => (
+              <div key={m.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-bold text-sm text-slate-900">
+                    {m.legislatura_numero ? `${m.legislatura_numero}ª Legislatura` : m.cargo}
+                  </div>
+                  {m.sigla_partido && (
+                    <span className="text-[11px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded">
+                      {m.sigla_partido}{m.uf ? ` • ${m.uf}` : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500 mt-2">
+                  {m.data_inicio ? m.data_inicio.substring(0, 10) : 'Início não informado'}
+                  {' → '}
+                  {m.data_fim ? m.data_fim.substring(0, 10) : 'atual'}
+                </div>
+                {m.situacao && <div className="text-xs text-slate-600 mt-2">{m.situacao}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Registros detalhados fornecidos pelo endpoint histórico da Câmara */}
       {historico && historico.length > 0 && (
         <section className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs space-y-5">
           <div className="flex items-center gap-2">
