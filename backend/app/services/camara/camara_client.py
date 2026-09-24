@@ -58,10 +58,45 @@ class CamaraClient:
 
         raise CamaraClientError(f"Erro ao consultar {clean_endpoint} após {self.max_retries} tentativas: {last_error}")
 
+    def get_paginated(
+        self,
+        endpoint: str,
+        params: Optional[dict[str, Any]] = None,
+        page_size: int = 100,
+        max_pages: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
+        """Percorre a paginação padrão da API da Câmara e agrega todos os registros."""
+        page = 1
+        result: list[dict[str, Any]] = []
+        base_params = dict(params or {})
+        page_size = max(1, min(page_size, 100))
+
+        while True:
+            current_params = {**base_params, "pagina": page, "itens": page_size}
+            payload = self.get(endpoint, params=current_params)
+            dados = payload.get("dados", []) or []
+            result.extend(dados)
+
+            links = payload.get("links", []) or []
+            has_next = any((link.get("rel") or "").lower() == "next" for link in links if isinstance(link, dict))
+            if not has_next or not dados:
+                break
+            if max_pages is not None and page >= max_pages:
+                break
+            page += 1
+
+        return result
+
     # Deputados
     def get_deputados(self, params: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
         res = self.get("/deputados", params=params)
         return res.get("dados", []) or []
+
+    def get_deputados_all(self, params: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
+        return self.get_paginated("/deputados", params=params, page_size=100)
+
+    def get_legislaturas(self, params: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
+        return self.get_paginated("/legislaturas", params=params, page_size=100)
 
     def get_deputado(self, id: int) -> Optional[dict[str, Any]]:
         res = self.get(f"/deputados/{id}")
