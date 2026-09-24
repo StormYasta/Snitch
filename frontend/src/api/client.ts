@@ -15,7 +15,12 @@ import type {
   VotacaoDetail,
   VotoDeputadoItem,
   StatsResponse,
-  GlobalSearchResult
+  GlobalSearchResult,
+  DeputadoTrajetoria,
+  LegislaturaItem,
+  InstituicaoSimple,
+  InstituicaoDetail,
+  EstruturaGovernoGraph
 } from '../types';
 
 const api = axios.create({
@@ -98,6 +103,16 @@ export async function getDeputadoHistorico(id: number): Promise<DeputadoHistoric
   return data;
 }
 
+export async function getDeputadoTrajetoria(id: number): Promise<DeputadoTrajetoria> {
+  const { data } = await api.get<DeputadoTrajetoria>(`/deputados/${id}/trajetoria`);
+  return data;
+}
+
+export async function getLegislaturas(): Promise<LegislaturaItem[]> {
+  const { data } = await api.get<LegislaturaItem[]>('/legislaturas');
+  return data;
+}
+
 // Proposições
 export async function getProposicoes(params: {
   busca?: string;
@@ -143,5 +158,35 @@ export async function getVotacaoVotos(id: number, params: {
   page_size?: number;
 }): Promise<PageResponse<VotoDeputadoItem>> {
   const { data } = await api.get<PageResponse<VotoDeputadoItem>>(`/votacoes/${id}/votos`, { params });
+  return data;
+}
+
+
+// Entenda o Governo
+export async function getEstruturaGoverno(): Promise<EstruturaGovernoGraph> {
+  const { data } = await api.get<EstruturaGovernoGraph>('/governo/estrutura');
+  return data;
+}
+
+export async function getInstituicoes(params: {
+  esfera?: string;
+  poder?: string;
+  tipo?: string;
+  nivel_federativo?: string;
+  busca?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<PageResponse<InstituicaoSimple>> {
+  const { data } = await api.get<PageResponse<InstituicaoSimple>>('/governo/instituicoes', { params });
+  return data;
+}
+
+export async function searchInstituicoes(q: string): Promise<InstituicaoSimple[]> {
+  const { data } = await api.get<InstituicaoSimple[]>('/governo/busca', { params: { q } });
+  return data;
+}
+
+export async function getInstituicao(id: number): Promise<InstituicaoDetail> {
+  const { data } = await api.get<InstituicaoDetail>(`/governo/instituicoes/${id}`);
   return data;
 }
