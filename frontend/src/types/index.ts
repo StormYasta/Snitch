@@ -82,6 +82,8 @@ export interface DeputadoVotoItem {
   data_hora?: string;
   descricao_votacao: string;
   tipo_voto: string;
+  sigla_partido_momento?: string;
+  uf_momento?: string;
   proposicao_id?: number;
   proposicao_sigla?: string;
   proposicao_numero?: number;
@@ -228,4 +230,125 @@ export interface GlobalSearchResult {
   deputados: DeputadoSimple[];
   proposicoes: ProposicaoSimple[];
   votacoes: VotacaoResumoItem[];
+}
+
+
+export interface MandatoItem {
+  id: number;
+  legislatura_numero?: number;
+  cargo: string;
+  sigla_partido?: string;
+  uf?: string;
+  situacao?: string;
+  condicao_eleitoral?: string;
+  data_inicio?: string;
+  data_fim?: string;
+}
+
+export interface FiliacaoPartidariaItem {
+  id: number;
+  sigla_partido: string;
+  nome_partido?: string;
+  data_inicio?: string;
+  data_fim?: string;
+  fonte?: string;
+}
+
+export interface TrajetoriaMilestone {
+  tipo: string;
+  titulo: string;
+  subtitulo?: string;
+  data?: string;
+  ano?: number;
+  legislatura?: number;
+  partido?: string;
+  uf?: string;
+  detalhes?: string;
+}
+
+export interface DeputadoTrajetoria {
+  deputado_id: number;
+  nome_parlamentar: string;
+  sigla_partido_atual?: string;
+  uf_atual?: string;
+  mandatos: MandatoItem[];
+  filiacoes: FiliacaoPartidariaItem[];
+  timeline: TrajetoriaMilestone[];
+}
+
+export interface LegislaturaItem {
+  id: number;
+  camara_id: number;
+  numero: number;
+  data_inicio?: string;
+  data_fim?: string;
+  ano_inicio?: number;
+  ano_fim?: number;
+}
+
+export interface InstituicaoSimple {
+  id: number;
+  nome: string;
+  sigla?: string;
+  tipo: string;
+  poder: string;
+  esfera: string;
+  nivel_federativo: string;
+  codigo_externo?: string;
+  natureza_juridica?: string;
+  site_oficial?: string;
+  ativo: boolean;
+}
+
+export interface RelacaoInstitucionalItem {
+  id: number;
+  origem_id: number;
+  origem_nome: string;
+  origem_sigla?: string;
+  origem_tipo: string;
+  destino_id: number;
+  destino_nome: string;
+  destino_sigla?: string;
+  destino_tipo: string;
+  tipo_relacao: string;
+  descricao?: string;
+  fonte?: string;
+}
+
+export interface InstituicaoDetail extends InstituicaoSimple {
+  descricao?: string;
+  fonte: string;
+  url_fonte?: string;
+  superiores: InstituicaoSimple[];
+  subordinados: InstituicaoSimple[];
+  vinculados: InstituicaoSimple[];
+  relacoes: RelacaoInstitucionalItem[];
+  integrado: boolean;
+  estatisticas_camara?: {
+    total_deputados: number;
+    total_proposicoes: number;
+    total_votacoes: number;
+    total_legislaturas: number;
+    links: Array<{ label: string; url: string }>;
+  };
+}
+
+export interface EstruturaGovernoNode extends InstituicaoSimple {
+  descricao?: string;
+  integrado: boolean;
+  parentId?: number;
+}
+
+export interface EstruturaGovernoEdge {
+  id: string;
+  source: number;
+  target: number;
+  tipo_relacao: string;
+  descricao?: string;
+}
+
+export interface EstruturaGovernoGraph {
+  nodes: EstruturaGovernoNode[];
+  edges: EstruturaGovernoEdge[];
+  legenda: Record<string, string>;
 }
