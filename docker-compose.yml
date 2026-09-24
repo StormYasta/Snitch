@@ -22,7 +22,7 @@ services:
       dockerfile: Dockerfile
     container_name: snitch_backend
     environment:
-      - DATABASE_URL=postgresql://snitch:snitch_password@db:5432/snitch_db
+      - DATABASE_URL=postgresql+psycopg2://snitch:snitch_password@db:5432/snitch_db
       - CAMARA_API_URL=https://dadosabertos.camara.leg.br/api/v2
       - CAMARA_TIMEOUT=10.0
       - CAMARA_MAX_RETRIES=3
