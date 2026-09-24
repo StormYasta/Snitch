@@ -24,6 +24,7 @@ export const DeputadoPerfil: React.FC = () => {
   const depId = Number(id);
 
   const [agrupamentoTemporal, setAgrupamentoTemporal] = useState<'mes' | 'ano'>('mes');
+  const [legislaturaTemporal, setLegislaturaTemporal] = useState('');
   const [activePropTab, setActivePropTab] = useState<'autoria' | 'votacao'>('autoria');
   const [filtroVoto, setFiltroVoto] = useState('');
   const [votosPage, setVotosPage] = useState(1);
@@ -42,8 +43,12 @@ export const DeputadoPerfil: React.FC = () => {
   });
 
   const { data: temporal } = useQuery({
-    queryKey: ['deputadoTemporal', depId, agrupamentoTemporal],
-    queryFn: () => getDeputadoTemporal(depId, agrupamentoTemporal),
+    queryKey: ['deputadoTemporal', depId, agrupamentoTemporal, legislaturaTemporal],
+    queryFn: () => getDeputadoTemporal(
+      depId,
+      agrupamentoTemporal,
+      legislaturaTemporal ? Number(legislaturaTemporal) : undefined
+    ),
     enabled: !isNaN(depId),
   });
 
@@ -282,23 +287,41 @@ export const DeputadoPerfil: React.FC = () => {
               <h3 className="text-base font-bold text-slate-900">Atividade ao Longo do Tempo</h3>
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs self-start sm:self-auto">
-              <button
-                onClick={() => setAgrupamentoTemporal('mes')}
-                className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
-                  agrupamentoTemporal === 'mes' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Por Mês
-              </button>
-              <button
-                onClick={() => setAgrupamentoTemporal('ano')}
-                className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
-                  agrupamentoTemporal === 'ano' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Por Ano
-              </button>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              {trajetoria?.mandatos && trajetoria.mandatos.length > 1 && (
+                <select
+                  value={legislaturaTemporal}
+                  onChange={(e) => setLegislaturaTemporal(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700"
+                >
+                  <option value="">Toda a trajetória</option>
+                  {trajetoria.mandatos
+                    .filter((m) => m.legislatura_numero)
+                    .map((m) => (
+                      <option key={m.id} value={m.legislatura_numero}>
+                        {m.legislatura_numero}ª Legislatura
+                      </option>
+                    ))}
+                </select>
+              )}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs">
+                <button
+                  onClick={() => setAgrupamentoTemporal('mes')}
+                  className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                    agrupamentoTemporal === 'mes' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Por Mês
+                </button>
+                <button
+                  onClick={() => setAgrupamentoTemporal('ano')}
+                  className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                    agrupamentoTemporal === 'ano' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Por Ano
+                </button>
+              </div>
             </div>
           </div>
 
