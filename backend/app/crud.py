@@ -848,9 +848,30 @@ def get_legislaturas(db: Session):
 # ==================== ENTENDA O GOVERNO: DIMENSÃO INSTITUCIONAL ====================
 
 def get_estrutura_governo(db: Session):
-    """Retorna a árvore / grafo canônico completo da estrutura do Estado brasileiro."""
-    instituicoes = db.query(Instituicao).filter(Instituicao.ativo == True).all()
-    relacoes = db.query(RelacaoInstitucional).all()
+    """Retorna um mapa institucional compacto para navegação.
+
+    Unidades internas muito profundas do SIORG continuam disponíveis na página de
+    detalhe da instituição, mas não são despejadas todas de uma vez no mapa.
+    """
+    tipos_mapa = {
+        "ESTADO", "ENTE_FEDERATIVO", "PODER", "GRUPO_INSTITUCIONAL",
+        "CASA_LEGISLATIVA", "TRIBUNAL", "ORGAO_CONTROLE", "ORGAO_AUTONOMO",
+        "MINISTERIO", "AUTARQUIA", "FUNDACAO", "ORGAO", "NOTA_CONSTITUCIONAL"
+    }
+    instituicoes = (
+        db.query(Instituicao)
+        .filter(Instituicao.ativo == True, Instituicao.tipo.in_(tipos_mapa))
+        .all()
+    )
+    visible_ids = {i.id for i in instituicoes}
+    relacoes = (
+        db.query(RelacaoInstitucional)
+        .filter(
+            RelacaoInstitucional.instituicao_origem_id.in_(visible_ids),
+            RelacaoInstitucional.instituicao_destino_id.in_(visible_ids),
+        )
+        .all()
+    )
 
     # Mapeia cada instituição para um nó navegável
     nodes = []
