@@ -65,8 +65,15 @@ export async function getDeputadoAtividade(id: number): Promise<DeputadoAtividad
   return data;
 }
 
-export async function getDeputadoTemporal(id: number, agrupamento: 'mes' | 'ano' = 'mes'): Promise<AtividadeTemporalItem[]> {
-  const { data } = await api.get<AtividadeTemporalItem[]>(`/deputados/${id}/temporal`, { params: { agrupamento } });
+export async function getDeputadoTemporal(
+  id: number,
+  agrupamento: 'mes' | 'ano' = 'mes',
+  legislatura?: number,
+  ano?: number
+): Promise<AtividadeTemporalItem[]> {
+  const { data } = await api.get<AtividadeTemporalItem[]>(`/deputados/${id}/temporal`, {
+    params: { agrupamento, legislatura, ano }
+  });
   return data;
 }
 
