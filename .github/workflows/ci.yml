@@ -17,6 +17,9 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
+      - run: alembic upgrade head
+        env:
+          DATABASE_URL: sqlite:///./migration_test.db
       - run: pytest -q
         env:
           DATABASE_URL: sqlite:///./test_snitch.db
