@@ -5,6 +5,9 @@ import type {
   DeputadoDetail,
   DeputadoAtividade,
   DeputadoIndicadores,
+  ComparativoResponse,
+  ComparativoFiltro,
+  VotacaoComparada,
   AtividadeTemporalItem,
   DistribuicaoVotosItem,
   DeputadoVotoItem,
@@ -66,8 +69,12 @@ export async function getDeputadoAtividade(id: number): Promise<DeputadoAtividad
   return data;
 }
 
-export async function getDeputadoIndicadores(id: number): Promise<DeputadoIndicadores> {
-  const { data } = await api.get<DeputadoIndicadores>(`/deputados/${id}/indicadores`);
+export async function getDeputadoIndicadores(
+  id: number, params?: { ano?: number; mes?: number }
+): Promise<DeputadoIndicadores> {
+  const { data } = await api.get<DeputadoIndicadores>(`/deputados/${id}/indicadores`, {
+    params, timeout: 40000,
+  });
   return data;
 }
 
@@ -201,5 +208,25 @@ export async function searchInstituicoes(q: string): Promise<InstituicaoSimple[]
 
 export async function getInstituicao(id: number): Promise<InstituicaoDetail> {
   const { data } = await api.get<InstituicaoDetail>(`/governo/instituicoes/${id}`);
+  return data;
+}
+
+
+export async function getComparativo(filters: ComparativoFiltro): Promise<ComparativoResponse> {
+  const { data } = await api.get<ComparativoResponse>('/comparativo/deputados', {
+    params: { ids: filters.ids.join(','), ano: filters.ano, legislatura: filters.legislatura },
+  });
+  return data;
+}
+
+export async function getComparativoVotacoes(
+  filters: ComparativoFiltro & { page: number; page_size?: number }
+): Promise<PageResponse<VotacaoComparada>> {
+  const { data } = await api.get<PageResponse<VotacaoComparada>>('/comparativo/votacoes', {
+    params: {
+      ids: filters.ids.join(','), ano: filters.ano, legislatura: filters.legislatura,
+      page: filters.page, page_size: filters.page_size ?? 12,
+    },
+  });
   return data;
 }

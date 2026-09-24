@@ -77,6 +77,68 @@ export interface DeputadoIndicadores {
   votacoes_nominais: number;
 }
 
+
+export interface ComparativoTema {
+  id: number;
+  nome: string;
+  sim: number;
+  nao: number;
+  abstencao: number;
+  obstrucao: number;
+  outros: number;
+  total_registrado: number;
+  total_sim_nao: number;
+  percentual_sim: number | null;
+  percentual_nao: number | null;
+}
+
+export interface ComparativoParlamentar {
+  id: number;
+  nome_parlamentar: string;
+  sigla_partido: string | null;
+  uf: string | null;
+  url_foto: string | null;
+  dados_demonstrativos: boolean;
+}
+
+export interface ComparativoDeputado {
+  deputado: ComparativoParlamentar;
+  atividade: {
+    votos_registrados: number;
+    votacoes_distintas: number;
+    dias_com_atividade: number;
+    presencas_eventos: number;
+    proposicoes_autoria: number;
+  };
+  votos: { sim: number; nao: number; abstencao: number; obstrucao: number; outros: number };
+  temas: ComparativoTema[];
+}
+
+export interface ComparativoResponse {
+  ano: number;
+  legislatura: number | null;
+  ultima_sincronizacao: string | null;
+  deputados: ComparativoDeputado[];
+  nota_metodologica: string;
+}
+
+export interface VotacaoComparada {
+  id: number;
+  camara_id: string;
+  data_hora: string | null;
+  descricao: string;
+  uri: string | null;
+  proposicao_id: number | null;
+  proposicao_nome: string | null;
+  votos: Record<string, string>;
+}
+
+export interface ComparativoFiltro {
+  ids: number[];
+  ano: number;
+  legislatura?: number;
+}
+
 export interface AtividadeTemporalItem {
   periodo: string;
   votos: number;

@@ -11,6 +11,7 @@ import { DeputadoPerfil } from './pages/DeputadoPerfil';
 import { Governo } from './pages/Governo';
 import { InstituicaoDetalhe } from './pages/InstituicaoDetalhe';
 import { Fontes } from './pages/Fontes';
+import { Comparativo } from './pages/Comparativo';
 import { getStats } from './api/client';
 
 const queryClient = new QueryClient({
@@ -43,6 +44,7 @@ const AppContent: React.FC = () => {
           <Route path="/governo" element={<Governo />} />
           <Route path="/governo/instituicoes/:id" element={<InstituicaoDetalhe />} />
           <Route path="/fontes" element={<Fontes />} />
+          <Route path="/comparar" element={<Comparativo />} />
         </Routes>
       </main>
 
