@@ -146,36 +146,55 @@ class HistoricoService:
         return processed
 
     def enrich_current_deputies(self, db: Session) -> int:
-        """Enriquece todos os deputados da legislatura mais recente com detalhe e histórico."""
+        """Enriquece a legislatura mais recente, com commit e recuperação por deputado.
+
+        Reexecuções são seguras: perfis e históricos são atualizados pelo ID oficial.
+        Cada deputado é uma transação independente para não perder todo o progresso
+        quando um registro ou uma conexão falha.
+        """
         latest = db.query(Legislatura).order_by(Legislatura.numero.desc()).first()
         if not latest:
             self.sync_legislaturas(db)
             latest = db.query(Legislatura).order_by(Legislatura.numero.desc()).first()
         if not latest:
+            db.rollback()
             return 0
 
+        latest_numero = latest.numero
+        # Libera a transação de leitura antes das chamadas HTTP potencialmente longas.
+        db.rollback()
         rows = self.client.get_deputados_all(
             {
-                "idLegislatura": latest.numero,
+                "idLegislatura": latest_numero,
                 "ordem": "ASC",
                 "ordenarPor": "nome",
             }
         )
         count = 0
+        failures = 0
 
         for item in rows:
             dep_id = item.get("id")
             if not dep_id:
                 continue
             try:
+                # Chama a API antes de abrir a transação de escrita.
                 raw = self.client.get_deputado(dep_id) or item
-                dep = self.deputados_service.upsert_deputado(db, raw)
+                try:
+                    historico = self.client.get_deputado_historico(dep_id)
+                except Exception as exc:
+                    logger.warning(
+                        "Histórico de %s indisponível; preservando histórico existente: %s",
+                        dep_id, exc,
+                    )
+                    historico = None
 
+                dep = self.deputados_service.upsert_deputado(db, raw)
                 mandato = (
                     db.query(Mandato)
                     .filter(
                         Mandato.deputado_id == dep.id,
-                        Mandato.legislatura_numero == latest.numero,
+                        Mandato.legislatura_numero == latest_numero,
                     )
                     .first()
                 )
@@ -185,28 +204,43 @@ class HistoricoService:
                     mandato.situacao = dep.situacao
                     mandato.condicao_eleitoral = dep.condicao_eleitoral
 
-                historico = self.client.get_deputado_historico(dep_id)
-                db.query(DeputadoHistorico).filter(
-                    DeputadoHistorico.deputado_id == dep.id
-                ).delete()
-                for h in historico:
-                    db.add(
-                        DeputadoHistorico(
-                            deputado_id=dep.id,
-                            data_hora=h.get("dataHora"),
-                            sigla_partido=h.get("siglaPartido"),
-                            situacao=h.get("situacao"),
-                            condicao_eleitoral=h.get("condicaoEleitoral"),
-                            descricao_status=h.get("descricaoStatus"),
-                            legislatura=h.get("idLegislatura"),
+                if historico is not None:
+                    db.query(DeputadoHistorico).filter(
+                        DeputadoHistorico.deputado_id == dep.id
+                    ).delete()
+                    for h in historico:
+                        db.add(
+                            DeputadoHistorico(
+                                deputado_id=dep.id,
+                                data_hora=h.get("dataHora"),
+                                sigla_partido=h.get("siglaPartido"),
+                                situacao=h.get("situacao"),
+                                condicao_eleitoral=h.get("condicaoEleitoral"),
+                                descricao_status=h.get("descricaoStatus"),
+                                legislatura=h.get("idLegislatura"),
+                            )
                         )
-                    )
 
                 dep.updated_at = utc_now()
+                db.commit()
                 count += 1
-            except Exception as exc:
-                logger.warning("Falha ao enriquecer deputado %s: %s", dep_id, exc)
+                if count % 25 == 0:
+                    logger.info("%s deputados enriquecidos nesta execução.", count)
+            except Exception:
+                failures += 1
+                # PostgreSQL exige rollback depois de qualquer erro SQL.
+                # Também permite reconectar após uma conexão invalidada.
+                db.rollback()
+                logger.exception("Falha ao enriquecer deputado %s; prosseguindo.", dep_id)
 
-        db.commit()
-        logger.info("%s deputados atuais enriquecidos.", count)
+        logger.info(
+            "Enriquecimento finalizado: %s concluídos, %s falhas. "
+            "Reexecute o comando para tentar novamente os registros pendentes.",
+            count, failures,
+        )
+        if failures:
+            raise RuntimeError(
+                f"Enriquecimento incompleto: {count} concluídos e {failures} falhas; "
+                "os registros concluídos foram preservados."
+            )
         return count

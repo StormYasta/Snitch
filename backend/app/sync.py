@@ -1,6 +1,7 @@
+import argparse
 import sys
 import logging
-from datetime import datetime, timezone
+from typing import Optional
 from app.database import SessionLocal, engine, Base
 from app.models import SyncRun, utc_now
 from app.services.camara.deputados_service import DeputadosService
@@ -15,7 +16,7 @@ from app.data.seed_data import load_seed_data
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-def run_sync(tipo: str):
+def run_sync(tipo: str, ano: Optional[int] = None, limite: Optional[int] = None):
     # Assegura que tabelas existem
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -29,6 +30,7 @@ def run_sync(tipo: str):
     db.add(sync_run)
     db.commit()
     db.refresh(sync_run)
+    sync_run_id = sync_run.id
 
     total_processados = 0
 
@@ -44,7 +46,9 @@ def run_sync(tipo: str):
 
         elif tipo in ["proposicoes"]:
             service = ProposicoesService()
-            total_processados += service.sync_proposicoes(db)
+            total_processados += service.sync_proposicoes(
+                db, ano=ano or 2024, limite=limite or 50
+            )
 
         elif tipo in ["votacoes"]:
             service = VotacoesService()
@@ -63,6 +67,10 @@ def run_sync(tipo: str):
             total_processados += service.sync_legislaturas(db)
             total_processados += service.sync_deputados_historicos(db)
             total_processados += service.enrich_current_deputies(db)
+
+        elif tipo in ["enriquecer_deputados"]:
+            # Retoma somente o enriquecimento: não recarrega milhares de mandatos.
+            total_processados += HistoricoService().enrich_current_deputies(db)
 
         elif tipo in ["estrutura_governo"]:
             total_processados += EstruturaService().sync_estrutura_canonica(db)
@@ -103,7 +111,8 @@ def run_sync(tipo: str):
             raise ValueError(
                 f"Comando de sincronização desconhecido: '{tipo}'. "
                 "Use: deputados, proposicoes, votacoes, eventos, legislaturas, "
-                "deputados_historicos, estrutura_governo, siorg, mvp2, all ou seed."
+                "deputados_historicos, enriquecer_deputados, estrutura_governo, "
+                "siorg, mvp2, all ou seed."
             )
 
         sync_run.status = "SUCCESS"
@@ -113,15 +122,37 @@ def run_sync(tipo: str):
         logger.info(f"Sincronização '{tipo}' concluída com sucesso! Total processado: {total_processados}")
 
     except Exception as e:
-        logger.error(f"Falha na sincronização '{tipo}': {e}", exc_info=True)
-        sync_run.status = "FAILED"
-        sync_run.finalizado_em = utc_now()
-        sync_run.erro = str(e)
-        db.commit()
+        logger.error("Falha na sincronização '%s': %s", tipo, e, exc_info=True)
+        # Depois de um erro SQL a sessão fica inutilizável até executar rollback.
+        # O registro de auditoria é escrito em uma transação independente.
+        db.rollback()
+        try:
+            with SessionLocal() as audit_db:
+                run = audit_db.get(SyncRun, sync_run_id)
+                if run is not None:
+                    run.status = "FAILED"
+                    run.finalizado_em = utc_now()
+                    run.registros_processados = total_processados
+                    run.erro = str(e)[:10000]
+                    audit_db.commit()
+        except Exception:
+            logger.exception("Não foi possível atualizar a auditoria da sincronização.")
         sys.exit(1)
     finally:
         db.close()
 
 if __name__ == "__main__":
-    action = sys.argv[1] if len(sys.argv) > 1 else "all"
-    run_sync(action.lower())
+    parser = argparse.ArgumentParser(description="Sincronização da base oficial do Snitch")
+    parser.add_argument("tipo", nargs="?", default="all")
+    parser.add_argument("--ano", type=int, help="Ano de referência (somente proposicoes)")
+    parser.add_argument("--limite", type=int, help="Quantidade (1 a 100, somente proposicoes)")
+    args = parser.parse_args()
+
+    if (args.ano is not None or args.limite is not None) and args.tipo.lower() != "proposicoes":
+        parser.error("--ano e --limite são parâmetros exclusivos de proposicoes")
+    if args.ano is not None and not 2000 <= args.ano <= 2100:
+        parser.error("--ano deve estar entre 2000 e 2100")
+    if args.limite is not None and not 1 <= args.limite <= 100:
+        parser.error("--limite deve estar entre 1 e 100")
+
+    run_sync(args.tipo.lower(), ano=args.ano, limite=args.limite)

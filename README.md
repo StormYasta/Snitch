@@ -79,7 +79,45 @@ O comando executa:
 4. estrutura institucional de alto nível;
 5. integração do Executivo Federal com SIORG.
 
-A carga histórica pode realizar muitas requisições na primeira execução.
+A carga histórica pode realizar muitas requisições na primeira execução. O comando `mvp2`
+**não importa proposições, votações nem eventos**. Essas cargas são independentes.
+
+Se a carga histórica já terminou e somente o enriquecimento falhou, execute:
+
+```bash
+docker compose exec backend python -m app.sync enriquecer_deputados
+```
+
+O enriquecimento confirma cada deputado individualmente e mantém os anteriores
+quando há erro. Pode ser executado novamente sem duplicar deputados nem mandatos.
+
+Para importar proposições de um ano específico (até 100 por execução):
+
+```bash
+docker compose exec backend python -m app.sync proposicoes --ano 2026 --limite 100
+docker compose exec backend python -m app.sync votacoes
+docker compose exec backend python -m app.sync eventos
+```
+
+Importe as proposições antes das votações para que as matérias já existentes
+possam ser associadas aos votos quando a API fornece a relação. A carga de
+proposições é uma amostra paginada limitada; não representa todo o histórico
+legislativo.
+
+### Atualização de bases PostgreSQL já criadas
+
+Bancos inicializados pelo `create_all` do FastAPI podem não possuir
+`alembic_version`. Para uma instalação PostgreSQL existente, execute a
+alteração **não destrutiva** antes de retomar o enriquecimento:
+
+```bash
+docker compose exec db psql -U snitch -d snitch_db -c "ALTER TABLE deputados ALTER COLUMN descricao_status TYPE TEXT; ALTER TABLE deputado_historico ALTER COLUMN descricao_status TYPE TEXT;"
+```
+
+A nova migração Alembic aplica a mesma alteração em bancos gerenciados por
+revisões. Não execute `alembic upgrade head` diretamente sobre uma instalação
+existente criada por `create_all` sem antes reconciliar seu histórico de
+migrações. Nunca use `docker compose down -v` para resolver essa falha.
 
 ### Comandos individuais
 
