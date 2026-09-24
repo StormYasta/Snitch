@@ -73,6 +73,20 @@ class DeputadoAtividade(BaseModel):
         "profissional do parlamentar."
     )
 
+class DeputadoIndicadores(BaseModel):
+    ano_referencia: int
+    mes_referencia: int
+    presencas_plenario: Optional[int] = None
+    faltas_plenario: Optional[int] = None
+    faltas_justificadas: Optional[int] = None
+    faltas_nao_justificadas: Optional[int] = None
+    percentual_presenca: Optional[float] = None
+    pls_apresentados: int = 0
+    pls_aprovados: int = 0
+    percentual_pls_aprovados: float = 0.0
+    uso_cota_mes: Optional[float] = None
+    votacoes_nominais: int = 0
+
 class AtividadeTemporalItem(BaseModel):
     periodo: str  # "2024-01" or "2024"
     votos: int

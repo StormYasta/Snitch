@@ -4,6 +4,7 @@ import type {
   DeputadoSimple,
   DeputadoDetail,
   DeputadoAtividade,
+  DeputadoIndicadores,
   AtividadeTemporalItem,
   DistribuicaoVotosItem,
   DeputadoVotoItem,
@@ -62,6 +63,11 @@ export async function getDeputado(id: number): Promise<DeputadoDetail> {
 
 export async function getDeputadoAtividade(id: number): Promise<DeputadoAtividade> {
   const { data } = await api.get<DeputadoAtividade>(`/deputados/${id}/atividade`);
+  return data;
+}
+
+export async function getDeputadoIndicadores(id: number): Promise<DeputadoIndicadores> {
+  const { data } = await api.get<DeputadoIndicadores>(`/deputados/${id}/indicadores`);
   return data;
 }
 

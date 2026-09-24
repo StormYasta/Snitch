@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Mail, Phone, MapPin, Calendar, Award,
   Info, TrendingUp, PieChart as PieIcon, History,
-  ExternalLink, HelpCircle, ChevronRight, Vote
+  ExternalLink, HelpCircle, ChevronRight, Vote,
+  Users, FileText, CheckCircle2, Receipt
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -13,7 +14,7 @@ import {
 import {
   getDeputado, getDeputadoAtividade, getDeputadoTemporal,
   getDeputadoDistribuicao, getDeputadoVotos, getDeputadoProposicoes,
-  getDeputadoHistorico, getDeputadoTrajetoria
+  getDeputadoHistorico, getDeputadoTrajetoria, getDeputadoIndicadores
 } from '../api/client';
 import { Avatar } from '../components/Avatar';
 import { VoteBadge, StatusBadge } from '../components/Badge';
@@ -39,6 +40,12 @@ export const DeputadoPerfil: React.FC = () => {
   const { data: atividade, isLoading: ativLoading } = useQuery({
     queryKey: ['deputadoAtividade', depId],
     queryFn: () => getDeputadoAtividade(depId),
+    enabled: !isNaN(depId),
+  });
+
+  const { data: indicadores, isLoading: indicadoresLoading } = useQuery({
+    queryKey: ['deputadoIndicadores', depId],
+    queryFn: () => getDeputadoIndicadores(depId),
     enabled: !isNaN(depId),
   });
 
@@ -106,6 +113,14 @@ export const DeputadoPerfil: React.FC = () => {
       </div>
     );
   }
+
+  const formatCurrency = (value?: number | null) => {
+    if (value == null) return '—';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
 
   // Cores neutras para gráfico de pizza de votos
   const PIE_COLORS: Record<string, string> = {
@@ -198,6 +213,105 @@ export const DeputadoPerfil: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* INDICADORES LEGISLATIVOS */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+          <h2 className="text-lg font-bold text-slate-900">Indicadores Legislativos</h2>
+          <span className="text-xs text-slate-500">Dados públicos da Câmara dos Deputados</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-indigo-600 mb-3">
+              <Users className="w-4 h-4" />
+              <span className="text-xs font-semibold">Presença no Plenário</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              {indicadoresLoading
+                ? '—'
+                : indicadores?.percentual_presenca != null
+                  ? `${indicadores.percentual_presenca.toFixed(1)}%`
+                  : '—'}
+            </div>
+            {indicadores?.presencas_plenario != null && indicadores?.faltas_plenario != null ? (
+              <>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {indicadores.presencas_plenario} presenças • {indicadores.faltas_plenario} faltas
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {indicadores.faltas_justificadas ?? 0} justificadas • {indicadores.faltas_nao_justificadas ?? 0} não justificadas
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] text-slate-400 mt-1">Frequência oficial indisponível</p>
+            )}
+            <p className="text-[10px] text-slate-400 mt-2">
+              {String(indicadores?.mes_referencia ?? new Date().getMonth() + 1).padStart(2, '0')}/{indicadores?.ano_referencia ?? new Date().getFullYear()}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-amber-600 mb-3">
+              <FileText className="w-4 h-4" />
+              <span className="text-xs font-semibold">PLs Apresentados</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              {indicadoresLoading ? '—' : indicadores?.pls_apresentados ?? 0}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              em {indicadores?.ano_referencia ?? new Date().getFullYear()}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-emerald-600 mb-3">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="text-xs font-semibold">PLs Aprovados</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              {indicadoresLoading ? '—' : indicadores?.pls_aprovados ?? 0}
+            </div>
+            <p className="text-[11px] text-emerald-600 mt-1">
+              {indicadores?.pls_apresentados
+                ? `Taxa registrada: ${indicadores.percentual_pls_aprovados.toFixed(1)}%`
+                : 'Sem PLs apresentados no período'}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-rose-500 mb-3">
+              <Receipt className="w-4 h-4" />
+              <span className="text-xs font-semibold">Uso da Cota</span>
+            </div>
+            <div className="text-xl md:text-2xl font-extrabold text-slate-900">
+              {indicadoresLoading ? '—' : formatCurrency(indicadores?.uso_cota_mes)}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">no mês de referência</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-violet-600 mb-3">
+              <Vote className="w-4 h-4" />
+              <span className="text-xs font-semibold">Votações Nominais</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              {indicadoresLoading ? '—' : indicadores?.votacoes_nominais ?? 0}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              com voto registrado em {indicadores?.ano_referencia ?? new Date().getFullYear()}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 flex items-start gap-2.5">
+          <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+          <span>
+            Presença e cota são consultadas nas fontes oficiais da Câmara. PLs e votações usam os registros sincronizados no Snitch.
+            Quando uma fonte externa não responde, o indicador é exibido como “—” em vez de assumir valor zero.
+          </span>
+        </div>
+      </section>
 
       {/* 10. & 11. CARDS DE ATIVIDADE OBJETIVA */}
       <section className="space-y-4">

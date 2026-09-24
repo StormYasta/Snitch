@@ -62,6 +62,21 @@ export interface DeputadoAtividade {
   nota_metodologica: string;
 }
 
+export interface DeputadoIndicadores {
+  ano_referencia: number;
+  mes_referencia: number;
+  presencas_plenario?: number | null;
+  faltas_plenario?: number | null;
+  faltas_justificadas?: number | null;
+  faltas_nao_justificadas?: number | null;
+  percentual_presenca?: number | null;
+  pls_apresentados: number;
+  pls_aprovados: number;
+  percentual_pls_aprovados: number;
+  uso_cota_mes?: number | null;
+  votacoes_nominais: number;
+}
+
 export interface AtividadeTemporalItem {
   periodo: string;
   votos: number;
