@@ -133,12 +133,12 @@ ESTRUTURA_CANONICA = [
     {
         "nome": "Funções Essenciais à Justiça e Órgãos de Controle da União",
         "sigla": "Órgãos Constitucionais Autônomos",
-        "tipo": "PODER",
-        "poder": "Instituição Autônoma / Controle",
+        "tipo": "GRUPO_INSTITUCIONAL",
+        "poder": "Instituições constitucionais e controle",
         "esfera": "Federal",
         "nivel_federativo": "União",
-        "natureza_juridica": "Instituições Constitucionais Autônomas",
-        "descricao": "Instituições permanentes com autonomia funcional, administrativa e financeira, independentes dos Três Poderes: Ministério Público da União, Defensoria Pública da União, Tribunal de Contas da União e Advocacia-Geral da União.",
+        "natureza_juridica": "Agrupamento didático de instituições com naturezas jurídicas distintas",
+        "descricao": "Agrupamento didático para funções essenciais à Justiça e instituições de controle. A relação jurídica de cada órgão é apresentada individualmente; o grupo não constitui um quarto Poder.",
         "site_oficial": "https://www.gov.br",
         "codigo_externo": "ORGAOS_AUTONOMOS_FED",
         "relacoes": [
@@ -159,7 +159,7 @@ ESTRUTURA_CANONICA = [
         "site_oficial": "https://www.congressonacional.leg.br",
         "codigo_externo": "CONGRESSO_NACIONAL",
         "relacoes": [
-            {"destino": "PODER_LEG_FED", "tipo": "HIERARQUIA_ADMINISTRATIVA", "descricao": "Órgão máximo do Poder Legislativo da União"}
+            {"destino": "PODER_LEG_FED", "tipo": "COMPOSICAO", "descricao": "Órgão constitucional que exerce o Poder Legislativo da União"}
         ]
     },
     {
@@ -287,7 +287,7 @@ ESTRUTURA_CANONICA = [
         "site_oficial": "https://portal.stf.jus.br",
         "codigo_externo": "STF",
         "relacoes": [
-            {"destino": "PODER_JUD_FED", "tipo": "HIERARQUIA_ADMINISTRATIVA", "descricao": "Instância máxima do Judiciário nacional"}
+            {"destino": "PODER_JUD_FED", "tipo": "COMPOSICAO", "descricao": "Órgão integrante do Poder Judiciário"}
         ]
     },
     {
@@ -317,7 +317,7 @@ ESTRUTURA_CANONICA = [
         "site_oficial": "https://www.stj.jus.br",
         "codigo_externo": "STJ",
         "relacoes": [
-            {"destino": "PODER_JUD_FED", "tipo": "HIERARQUIA_ADMINISTRATIVA", "descricao": "Corte superior de justiça federal e estadual comum"}
+            {"destino": "PODER_JUD_FED", "tipo": "COMPOSICAO", "descricao": "Órgão integrante do Poder Judiciário"}
         ]
     },
     {
@@ -332,7 +332,7 @@ ESTRUTURA_CANONICA = [
         "site_oficial": "https://www.cjf.jus.br",
         "codigo_externo": "TRFS",
         "relacoes": [
-            {"destino": "STJ", "tipo": "HIERARQUIA_ADMINISTRATIVA", "descricao": "Subordinados jurisdicionalmente ao STJ em matéria federal"}
+            {"destino": "PODER_JUD_FED", "tipo": "COMPOSICAO", "descricao": "Órgãos integrantes da Justiça Federal"}
         ]
     },
     {
@@ -347,7 +347,7 @@ ESTRUTURA_CANONICA = [
         "site_oficial": "https://www.tse.jus.br",
         "codigo_externo": "TSE",
         "relacoes": [
-            {"destino": "PODER_JUD_FED", "tipo": "HIERARQUIA_ADMINISTRATIVA", "descricao": "Órgão de cúpula do ramo eleitoral especializado"}
+            {"destino": "PODER_JUD_FED", "tipo": "COMPOSICAO", "descricao": "Órgão integrante da Justiça Eleitoral"}
         ]
     },
     {
@@ -362,7 +362,7 @@ ESTRUTURA_CANONICA = [
         "site_oficial": "https://www.tst.jus.br",
         "codigo_externo": "TST",
         "relacoes": [
-            {"destino": "PODER_JUD_FED", "tipo": "HIERARQUIA_ADMINISTRATIVA", "descricao": "Órgão de cúpula do ramo laboral especializado"}
+            {"destino": "PODER_JUD_FED", "tipo": "COMPOSICAO", "descricao": "Órgão integrante da Justiça do Trabalho"}
         ]
     },
 
