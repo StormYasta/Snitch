@@ -13,7 +13,7 @@ export const Footer: React.FC<FooterProps> = ({ ultimaSincronizacao }) => {
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-slate-400" />
             <span className="font-medium text-slate-700">Fonte dos Dados:</span>
-            <span>Câmara dos Deputados — Dados Abertos (API v2)</span>
+            <span>Câmara dos Deputados — Dados Abertos (API v2) • SIORG — Estrutura do Executivo Federal</span>
             <a
               href="https://dadosabertos.camara.leg.br"
               target="_blank"
