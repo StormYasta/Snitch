@@ -8,6 +8,8 @@ import { Proposicoes } from './pages/Proposicoes';
 import { ProposicaoDetalhe } from './pages/ProposicaoDetalhe';
 import { Deputados } from './pages/Deputados';
 import { DeputadoPerfil } from './pages/DeputadoPerfil';
+import { Governo } from './pages/Governo';
+import { InstituicaoDetalhe } from './pages/InstituicaoDetalhe';
 import { getStats } from './api/client';
 
 const queryClient = new QueryClient({
@@ -37,6 +39,8 @@ const AppContent: React.FC = () => {
           <Route path="/proposicoes/:id" element={<ProposicaoDetalhe />} />
           <Route path="/deputados" element={<Deputados />} />
           <Route path="/deputados/:id" element={<DeputadoPerfil />} />
+          <Route path="/governo" element={<Governo />} />
+          <Route path="/governo/instituicoes/:id" element={<InstituicaoDetalhe />} />
         </Routes>
       </main>
 
