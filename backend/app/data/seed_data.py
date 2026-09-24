@@ -448,7 +448,10 @@ def load_seed_data(db: Session) -> dict:
                 sigla_partido=fil_dict["sigla_partido"],
                 nome_partido=fil_dict["nome_partido"],
                 data_inicio=fil_dict["data_inicio"],
-                data_fim=fil_dict["data_fim"]
+                data_fim=fil_dict["data_fim"],
+                fonte="Dados demonstrativos"
+            ))
+
     db.flush()
 
     # 2. Temas oficiais
