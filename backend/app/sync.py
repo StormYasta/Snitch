@@ -1,6 +1,7 @@
 import argparse
 import sys
 import logging
+from datetime import date
 from typing import Optional
 from app.database import SessionLocal, engine, Base
 from app.models import SyncRun, utc_now
@@ -9,6 +10,7 @@ from app.services.camara.proposicoes_service import ProposicoesService
 from app.services.camara.votacoes_service import VotacoesService
 from app.services.camara.eventos_service import EventosService
 from app.services.camara.historico_service import HistoricoService
+from app.services.camara.historico_legislativo_service import HistoricoLegislativoService
 from app.services.siorg.estrutura_service import EstruturaService
 from app.services.siorg.orgaos_service import OrgaosService
 from app.data.seed_data import load_seed_data
@@ -21,6 +23,10 @@ def run_sync(
     ano: Optional[int] = None,
     limite: Optional[int] = None,
     camara_ids: Optional[set[int]] = None,
+    ano_inicial: Optional[int] = None,
+    ano_final: Optional[int] = None,
+    somente: str = "todos",
+    limite_paginas: Optional[int] = None,
 ):
     # Assegura que tabelas existem
     Base.metadata.create_all(bind=engine)
@@ -62,6 +68,15 @@ def run_sync(
         elif tipo in ["eventos"]:
             service = EventosService()
             total_processados += service.sync_eventos(db)
+
+        elif tipo in ["historico"]:
+            total_processados += HistoricoLegislativoService().sync_periodo(
+                db,
+                ano_inicial=ano_inicial or 2018,
+                ano_final=ano_final or date.today().year,
+                somente=somente,
+                limite_paginas=limite_paginas,
+            )
 
         elif tipo in ["legislaturas"]:
             service = HistoricoService()
@@ -118,7 +133,7 @@ def run_sync(
             raise ValueError(
                 f"Comando de sincronização desconhecido: '{tipo}'. "
                 "Use: deputados, proposicoes, votacoes, eventos, legislaturas, "
-                "deputados_historicos, enriquecer_deputados, estrutura_governo, "
+                "deputados_historicos, enriquecer_deputados, historico, estrutura_governo, "
                 "siorg, mvp2, all ou seed."
             )
 
@@ -157,6 +172,16 @@ if __name__ == "__main__":
         "--ids", type=str,
         help="IDs oficiais da Câmara separados por vírgula (somente enriquecer_deputados)",
     )
+    parser.add_argument("--ano-inicial", type=int, help="Ano inicial da carga histórica")
+    parser.add_argument("--ano-final", type=int, help="Ano final da carga histórica")
+    parser.add_argument(
+        "--somente", choices=["todos", "proposicoes", "votacoes", "eventos"],
+        default="todos", help="Conjunto a importar no modo historico",
+    )
+    parser.add_argument(
+        "--limite-paginas", type=int,
+        help="Amostra de até N páginas por ano e tipo (modo historico)",
+    )
     args = parser.parse_args()
 
     if (args.ano is not None or args.limite is not None) and args.tipo.lower() != "proposicoes":
@@ -165,6 +190,19 @@ if __name__ == "__main__":
         parser.error("--ano deve estar entre 2000 e 2100")
     if args.limite is not None and not 1 <= args.limite <= 100:
         parser.error("--limite deve estar entre 1 e 100")
+
+    if args.tipo.lower() != "historico" and (
+        args.ano_inicial is not None or args.ano_final is not None
+        or args.somente != "todos" or args.limite_paginas is not None
+    ):
+        parser.error("--ano-inicial, --ano-final, --somente e --limite-paginas exigem historico")
+    if args.tipo.lower() == "historico":
+        inicio = args.ano_inicial if args.ano_inicial is not None else 2018
+        fim = args.ano_final if args.ano_final is not None else date.today().year
+        if not 2000 <= inicio <= fim <= date.today().year:
+            parser.error("O intervalo deve estar entre 2000 e o ano atual")
+        if args.limite_paginas is not None and args.limite_paginas < 1:
+            parser.error("--limite-paginas deve ser positivo")
 
     camara_ids = None
     if args.ids is not None:
@@ -187,4 +225,8 @@ if __name__ == "__main__":
         ano=args.ano,
         limite=args.limite,
         camara_ids=camara_ids,
+        ano_inicial=args.ano_inicial,
+        ano_final=args.ano_final,
+        somente=args.somente,
+        limite_paginas=args.limite_paginas,
     )

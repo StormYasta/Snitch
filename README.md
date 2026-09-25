@@ -116,6 +116,42 @@ possam ser associadas aos votos quando a API fornece a relação. A carga de
 proposições é uma amostra paginada limitada; não representa todo o histórico
 legislativo.
 
+### Importação histórica de 2018 até o ano atual
+
+O comando `historico` percorre todas as páginas disponibilizadas pela API da
+Câmara para **proposições, votações e eventos**, por ano. Para votações, importa
+também os votos nominais e as orientações; para eventos, os participantes
+informados; para proposições, autores, temas e tramitações.
+
+```bash
+docker compose exec backend python -m app.sync historico --ano-inicial 2018 --ano-final 2026
+```
+
+O processamento de nove anos pode demorar muitas horas, conforme a quantidade
+de registros, latência e disponibilidade da API. Rode no terminal ou em sessão
+persistente e acompanhe os logs. Antes de importar tudo, é possível testar
+**somente a primeira página** de um ano:
+
+```bash
+docker compose exec backend python -m app.sync historico --ano-inicial 2018 --ano-final 2018 --somente votacoes --limite-paginas 1
+```
+
+Também é possível executar por tipo, especialmente se uma etapa falhar:
+
+```bash
+docker compose exec backend python -m app.sync historico --ano-inicial 2018 --ano-final 2026 --somente proposicoes
+docker compose exec backend python -m app.sync historico --ano-inicial 2018 --ano-final 2026 --somente votacoes
+docker compose exec backend python -m app.sync historico --ano-inicial 2018 --ano-final 2026 --somente eventos
+```
+
+O comando é idempotente e confirma cada registro: interromper e reexecutar não
+duplica os objetos com identificador oficial, mas **repete consultas à API**
+para percorrer as páginas novamente. Os erros por item são informados nos logs;
+a execução é marcada como falha caso algum registro não seja importado. Um
+limite de páginas gera **apenas uma amostra**, nunca uma carga completa. Os
+dados de votos e vínculos por tema dependem das relações presentes na fonte
+oficial e não devem ser confundidos com juízos sobre políticas públicas.
+
 ### Atualização de bases PostgreSQL já criadas
 
 Bancos inicializados pelo `create_all` do FastAPI podem não possuir
