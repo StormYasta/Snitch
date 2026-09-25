@@ -389,3 +389,15 @@ class SyncRun(Base):
     status = Column(String(20), default="RUNNING")  # "SUCCESS", "FAILED", "RUNNING"
     registros_processados = Column(Integer, default=0)
     erro = Column(Text, nullable=True)
+
+
+class OfficialCache(Base):
+    """Agregados oficiais sob demanda, separados do histórico parlamentar."""
+    __tablename__ = "official_cache"
+
+    cache_key = Column(String(200), primary_key=True)
+    source = Column(String(50), nullable=False, index=True)
+    source_url = Column(String(500), nullable=False)
+    payload = Column(JSON, nullable=False)
+    fetched_at = Column(DateTime(timezone=True), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
