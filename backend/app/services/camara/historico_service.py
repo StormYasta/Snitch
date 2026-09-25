@@ -145,7 +145,9 @@ class HistoricoService:
         logger.info("%s vínculos históricos deputado-legislatura processados.", processed)
         return processed
 
-    def enrich_current_deputies(self, db: Session) -> int:
+    def enrich_current_deputies(
+        self, db: Session, ids: Optional[set[int]] = None
+    ) -> int:
         """Enriquece a legislatura mais recente, com commit e recuperação por deputado.
 
         Reexecuções são seguras: perfis e históricos são atualizados pelo ID oficial.
@@ -163,15 +165,39 @@ class HistoricoService:
         latest_numero = latest.numero
         # Libera a transação de leitura antes das chamadas HTTP potencialmente longas.
         db.rollback()
-        rows = self.client.get_deputados_all(
-            {
-                "idLegislatura": latest_numero,
-                "ordem": "ASC",
-                "ordenarPor": "nome",
+        if ids is None:
+            rows = self.client.get_deputados_all(
+                {
+                    "idLegislatura": latest_numero,
+                    "ordem": "ASC",
+                    "ordenarPor": "nome",
+                }
+            )
+        else:
+            # --ids contém identificadores oficiais (Câmara), não chaves internas
+            # da tabela deputados. Não carrega novamente a listagem inteira.
+            known = {
+                camara_id for (camara_id,) in (
+                    db.query(Deputado.camara_id)
+                    .join(Mandato, Mandato.deputado_id == Deputado.id)
+                    .filter(
+                        Mandato.legislatura_numero == latest_numero,
+                        Deputado.camara_id.in_(ids),
+                    )
+                    .all()
+                )
             }
-        )
+            db.rollback()
+            unknown = ids - known
+            if unknown:
+                raise ValueError(
+                    "IDs Câmara sem mandato na legislatura atual: "
+                    + ", ".join(str(value) for value in sorted(unknown))
+                )
+            rows = [{"id": value} for value in sorted(ids)]
+
         count = 0
-        failures = 0
+        failures: list[tuple[int, str]] = []
 
         for item in rows:
             dep_id = item.get("id")
@@ -226,21 +252,25 @@ class HistoricoService:
                 count += 1
                 if count % 25 == 0:
                     logger.info("%s deputados enriquecidos nesta execução.", count)
-            except Exception:
-                failures += 1
+            except Exception as exc:
+                failures.append((dep_id, f"{type(exc).__name__}: {exc}"))
                 # PostgreSQL exige rollback depois de qualquer erro SQL.
                 # Também permite reconectar após uma conexão invalidada.
                 db.rollback()
                 logger.exception("Falha ao enriquecer deputado %s; prosseguindo.", dep_id)
 
         logger.info(
-            "Enriquecimento finalizado: %s concluídos, %s falhas. "
-            "Reexecute o comando para tentar novamente os registros pendentes.",
-            count, failures,
+            "Enriquecimento finalizado: %s concluídos, %s falhas.",
+            count, len(failures),
         )
         if failures:
+            details = "; ".join(
+                f"{dep_id} ({reason[:250]})" for dep_id, reason in failures
+            )
             raise RuntimeError(
-                f"Enriquecimento incompleto: {count} concluídos e {failures} falhas; "
-                "os registros concluídos foram preservados."
+                f"Enriquecimento incompleto: {count} concluídos e "
+                f"{len(failures)} falhas; os registros concluídos foram preservados. "
+                f"IDs Câmara com falhas: {details}. "
+                "Use --ids para repetir apenas os registros pendentes."
             )
         return count

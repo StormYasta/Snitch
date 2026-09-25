@@ -90,6 +90,18 @@ docker compose exec backend python -m app.sync enriquecer_deputados
 
 O enriquecimento confirma cada deputado individualmente e mantém os anteriores
 quando há erro. Pode ser executado novamente sem duplicar deputados nem mandatos.
+Em caso de falhas isoladas, os logs e o registro de auditoria exibem os IDs
+oficiais da Câmara e as causas; é possível repetir apenas esses IDs:
+
+```bash
+docker compose exec backend python -m app.sync enriquecer_deputados --ids 101,102
+```
+
+Para identificar pendentes da **última** execução de enriquecimento em um banco
+já carregado, consulte os deputados da legislatura mais recente cujo
+`updated_at` é anterior ao início registrado em `sync_runs`.
+Isso pressupõe que não houve outras atualizações desses deputados durante
+a sincronização.
 
 Para importar proposições de um ano específico (até 100 por execução):
 

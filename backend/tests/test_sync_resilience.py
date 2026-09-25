@@ -75,12 +75,25 @@ def test_enriquecimento_preserva_registros_anteriores_e_permite_reexecucao(db):
     assert isinstance(Deputado.__table__.columns.descricao_status.type, Text)
     assert isinstance(DeputadoHistorico.__table__.columns.descricao_status.type, Text)
 
-    # O mesmo comando pode ser reexecutado sem duplicar os registros confirmados.
+    # Retoma apenas o deputado com falha, sem requisitar os 3 novamente.
     retried = HistoricoService(client=client)
+    from app.models import Mandato
+    db.add(Mandato(deputado_id=db.query(Deputado).filter_by(camara_id=101).one().id, legislatura_numero=57))
+    db.add(Mandato(deputado_id=db.query(Deputado).filter_by(camara_id=103).one().id, legislatura_numero=57))
+    db.add(Deputado(camara_id=102, nome_parlamentar="Deputado 102"))
+    db.flush()
+    db.add(Mandato(deputado_id=db.query(Deputado).filter_by(camara_id=102).one().id, legislatura_numero=57))
+    db.commit()
+    assert retried.enrich_current_deputies(db, ids={102}) == 1
+
+    # A reexecução integral também é idempotente.
     assert retried.enrich_current_deputies(db) == 3
     assert {row.camara_id for row in db.query(Deputado).all()} == {101, 102, 103}
     assert db.query(DeputadoHistorico).count() == 3
     assert len(db.query(Deputado).filter(Deputado.camara_id == 101).one().descricao_status) > 255
+
+    with pytest.raises(ValueError, match="sem mandato"):
+        retried.enrich_current_deputies(db, ids={999999})
 
 
 class FakeProposicoes:

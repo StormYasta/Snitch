@@ -16,7 +16,12 @@ from app.data.seed_data import load_seed_data
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-def run_sync(tipo: str, ano: Optional[int] = None, limite: Optional[int] = None):
+def run_sync(
+    tipo: str,
+    ano: Optional[int] = None,
+    limite: Optional[int] = None,
+    camara_ids: Optional[set[int]] = None,
+):
     # Assegura que tabelas existem
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -70,7 +75,9 @@ def run_sync(tipo: str, ano: Optional[int] = None, limite: Optional[int] = None)
 
         elif tipo in ["enriquecer_deputados"]:
             # Retoma somente o enriquecimento: não recarrega milhares de mandatos.
-            total_processados += HistoricoService().enrich_current_deputies(db)
+            total_processados += HistoricoService().enrich_current_deputies(
+                db, ids=camara_ids
+            )
 
         elif tipo in ["estrutura_governo"]:
             total_processados += EstruturaService().sync_estrutura_canonica(db)
@@ -146,6 +153,10 @@ if __name__ == "__main__":
     parser.add_argument("tipo", nargs="?", default="all")
     parser.add_argument("--ano", type=int, help="Ano de referência (somente proposicoes)")
     parser.add_argument("--limite", type=int, help="Quantidade (1 a 100, somente proposicoes)")
+    parser.add_argument(
+        "--ids", type=str,
+        help="IDs oficiais da Câmara separados por vírgula (somente enriquecer_deputados)",
+    )
     args = parser.parse_args()
 
     if (args.ano is not None or args.limite is not None) and args.tipo.lower() != "proposicoes":
@@ -155,4 +166,25 @@ if __name__ == "__main__":
     if args.limite is not None and not 1 <= args.limite <= 100:
         parser.error("--limite deve estar entre 1 e 100")
 
-    run_sync(args.tipo.lower(), ano=args.ano, limite=args.limite)
+    camara_ids = None
+    if args.ids is not None:
+        if args.tipo.lower() != "enriquecer_deputados":
+            parser.error("--ids é exclusivo de enriquecer_deputados")
+        try:
+            raw_ids = [part.strip() for part in args.ids.split(",")]
+            if not 1 <= len(raw_ids) <= 100 or any(
+                not part.isdecimal() or int(part) <= 0 for part in raw_ids
+            ):
+                raise ValueError()
+            camara_ids = {int(part) for part in raw_ids}
+            if len(camara_ids) != len(raw_ids):
+                raise ValueError()
+        except ValueError:
+            parser.error("--ids exige entre 1 e 100 IDs Câmara positivos, sem repetições")
+
+    run_sync(
+        args.tipo.lower(),
+        ano=args.ano,
+        limite=args.limite,
+        camara_ids=camara_ids,
+    )
