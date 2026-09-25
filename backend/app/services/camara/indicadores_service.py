@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.models import Deputado, Proposicao, ProposicaoAutor, Votacao, Voto
 from app.services.camara.camara_client import CamaraClient
+from app.services.official_cache import cached_official
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -281,8 +283,32 @@ class IndicadoresService:
             else 0.0
         )
 
-        presencas = self._buscar_presencas(deputado.camara_id, ano_ref, mes_ref)
-        uso_cota = self._buscar_cota(deputado.camara_id, ano_ref, mes_ref)
+        presencas_info = cached_official(
+            db,
+            key=f"presencas:{deputado.camara_id}:{ano_ref}:{mes_ref}",
+            source="presencas",
+            url=self.PRESENCAS_URL,
+            ttl_hours=settings.presence_ttl_hours,
+            loader=lambda: self._buscar_presencas(deputado.camara_id, ano_ref, mes_ref),
+            usable=lambda item: isinstance(item, dict) and item.get("percentual_presenca") is not None,
+        )
+        cota_info = cached_official(
+            db,
+            key=f"despesas:{deputado.camara_id}:{ano_ref}:{mes_ref}",
+            source="despesas",
+            url=f"{settings.camara_api_url}/deputados/{deputado.camara_id}/despesas",
+            ttl_hours=settings.expenses_ttl_hours,
+            loader=lambda: self._buscar_cota(deputado.camara_id, ano_ref, mes_ref),
+            usable=lambda item: item is not None,
+        )
+        presencas = presencas_info.value if isinstance(presencas_info.value, dict) else {
+            "presencas_plenario": None,
+            "faltas_plenario": None,
+            "faltas_justificadas": None,
+            "faltas_nao_justificadas": None,
+            "percentual_presenca": None,
+        }
+        uso_cota = cota_info.value
 
         return {
             "ano_referencia": ano_ref,
@@ -293,4 +319,5 @@ class IndicadoresService:
             "percentual_pls_aprovados": percentual_pls,
             "uso_cota_mes": uso_cota,
             "votacoes_nominais": int(votacoes_nominais),
+            "fontes": {"presencas": presencas_info.metadata(), "despesas": cota_info.metadata()},
         }

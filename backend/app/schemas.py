@@ -73,6 +73,13 @@ class DeputadoAtividade(BaseModel):
         "profissional do parlamentar."
     )
 
+class FonteIndicador(BaseModel):
+    status: str
+    fonte: str
+    consultado_em: Optional[datetime] = None
+    expira_em: Optional[datetime] = None
+
+
 class DeputadoIndicadores(BaseModel):
     ano_referencia: int
     mes_referencia: int
@@ -86,6 +93,7 @@ class DeputadoIndicadores(BaseModel):
     percentual_pls_aprovados: float = 0.0
     uso_cota_mes: Optional[float] = None
     votacoes_nominais: int = 0
+    fontes: dict[str, FonteIndicador] = {}
 
 class AtividadeTemporalItem(BaseModel):
     periodo: str  # "2024-01" or "2024"
