@@ -201,9 +201,11 @@ export const Home: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {searchResults.votacoes.map((v) => (
-                      <div
+                      <Link
                         key={v.id}
-                        className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between"
+                        to={`/votacoes/${v.id}`}
+                        aria-label={`Abrir votação: ${v.descricao}`}
+                        className="group bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between hover:border-slate-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 transition-all"
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-xs text-slate-500">
@@ -218,7 +220,7 @@ export const Home: React.FC = () => {
                             Sim: {v.placar_sim} | Não: {v.placar_nao}
                           </span>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -374,9 +376,11 @@ export const Home: React.FC = () => {
               <CardSkeleton count={2} />
             ) : (
               stats?.votacoes_recentes?.map((v) => (
-                <div
+                <Link
                   key={v.id}
-                  className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3"
+                  to={`/votacoes/${v.id}`}
+                  aria-label={`Abrir votação: ${v.descricao}`}
+                  className="group block bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3 hover:border-slate-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 transition-all"
                 >
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span className="flex items-center gap-1">
@@ -406,7 +410,7 @@ export const Home: React.FC = () => {
                       {v.placar_abstencao > 0 && <span className="text-amber-700">Abst: {v.placar_abstencao}</span>}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>
