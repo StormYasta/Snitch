@@ -1,5 +1,7 @@
 # Snitch
 
+**Deploy híbrido:** [Supabase + FastAPI + GitHub Pages](docs/deploy-hibrido.md) · [Schema SQL para projeto novo](supabase/schema.sql)
+
 Plataforma web para consulta de atividade legislativa e navegação pela estrutura institucional brasileira.
 
 ## Escopo atual
