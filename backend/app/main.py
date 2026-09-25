@@ -14,13 +14,15 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Cria tabelas se não existirem
-    Base.metadata.create_all(bind=engine)
+    if settings.auto_create_tables:
+        # Somente desenvolvimento local; em produção usar Alembic e SQL de segurança.
+        Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         # Seed demonstrativo é opt-in. Em uso normal a base deve ser alimentada
         # exclusivamente pelos comandos de sincronização com fontes oficiais.
         total_deputados = db.query(Deputado).count()
-        if total_deputados == 0 and settings.load_demo_seed:
+        if total_deputados == 0 and settings.load_demo_seed and settings.auto_create_tables:
             logger.warning("LOAD_DEMO_SEED ativo: carregando dados demonstrativos.")
             load_seed_data(db)
     except Exception as e:

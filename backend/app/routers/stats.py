@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+import secrets
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Header
+from app.config import settings
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.database import get_db
@@ -33,6 +35,21 @@ def get_sync_status(db: Session = Depends(get_db)):
     )
 
 @router.post("/sync/trigger")
-def trigger_sync(background_tasks: BackgroundTasks, tipo: str = "seed"):
+def trigger_sync(
+    background_tasks: BackgroundTasks,
+    tipo: str = "deputados",
+    x_snitch_sync_token: str | None = Header(default=None),
+):
+    if not settings.sync_admin_token or not secrets.compare_digest(
+        x_snitch_sync_token or "", settings.sync_admin_token
+    ):
+        raise HTTPException(status_code=403, detail="Operação administrativa não autorizada.")
+    allowed = {
+        "deputados", "proposicoes", "votacoes", "eventos", "historico",
+        "legislaturas", "deputados_historicos", "enriquecer_deputados",
+        "estrutura_governo", "siorg", "mvp2",
+    }
+    if tipo not in allowed:
+        raise HTTPException(status_code=422, detail="Tipo de sincronização não autorizado.")
     background_tasks.add_task(run_sync, tipo)
     return {"message": f"Sincronização '{tipo}' iniciada em segundo plano."}

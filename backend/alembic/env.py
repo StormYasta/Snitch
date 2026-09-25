@@ -20,7 +20,7 @@ from app.models import (
     Proposicao, ProposicaoAutor, Tema, ProposicaoTema,
     Tramitacao, Votacao, VotacaoProposicao, VotacaoOrientacao, Voto,
     Evento, EventoDeputado, Instituicao, RelacaoInstitucional,
-    Cargo, OcupacaoCargo, SyncRun
+    Cargo, OcupacaoCargo, SyncRun, OfficialCache
 )
 from app.config import settings
 
