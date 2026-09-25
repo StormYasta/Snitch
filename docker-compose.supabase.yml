@@ -1,0 +1,22 @@
+# Desenvolvimento usando Supabase remoto em vez do Postgres em Docker.
+# Prepare backend/.env com DATABASE_URL e CORS_ORIGINS.
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

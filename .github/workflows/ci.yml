@@ -38,3 +38,50 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  supabase-schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test_password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: test_password
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Supabase Data API roles for SQL compatibility test
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE anon NOLOGIN;"
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE authenticated NOLOGIN;"
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE service_role NOLOGIN;"
+      - name: Apply clean Supabase bootstrap
+        run: psql -v ON_ERROR_STOP=1 -f supabase/schema.sql
+      - name: Verify SQL model, cache, version and RLS
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "
+            DO \$\$
+            DECLARE n integer;
+            BEGIN
+              SELECT count(*) INTO n FROM pg_tables WHERE schemaname = 'public'
+                AND tablename IN ('deputados','votos','proposicoes','proposicao_temas','official_cache');
+              IF n <> 5 THEN RAISE EXCEPTION 'Schema incomplete: %', n; END IF;
+              SELECT count(*) INTO n FROM pg_tables t
+                JOIN pg_class c ON c.relname = t.tablename
+                JOIN pg_namespace ns ON ns.oid = c.relnamespace AND ns.nspname = t.schemaname
+                WHERE t.schemaname = 'public' AND NOT c.relrowsecurity;
+              IF n > 0 THEN RAISE EXCEPTION 'Found % tables without RLS', n; END IF;
+              IF NOT EXISTS (SELECT 1 FROM alembic_version WHERE version_num = 'a64b8f27c901')
+                THEN RAISE EXCEPTION 'Alembic version mismatch'; END IF;
+            END \$\$;
+          "
