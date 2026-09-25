@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -14,6 +14,9 @@ import { Fontes } from './pages/Fontes';
 import { Comparativo } from './pages/Comparativo';
 import { VotacaoDetalhe } from './pages/VotacaoDetalhe';
 import { getStats } from './api/client';
+
+const Router = import.meta.env.VITE_ROUTER_MODE === 'hash' ? HashRouter : BrowserRouter;
+const basename = import.meta.env.VITE_ROUTER_MODE === 'hash' ? undefined : import.meta.env.BASE_URL;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,9 +61,9 @@ const AppContent: React.FC = () => {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <Router basename={basename}>
         <AppContent />
-      </BrowserRouter>
+      </Router>
     </QueryClientProvider>
   );
 }

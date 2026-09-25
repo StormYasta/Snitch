@@ -18,3 +18,12 @@ dist/
 .idea/
 Thumbs.db
 .DS_Store
+
+# Credenciais de banco, Supabase e tokens de sincronização
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
