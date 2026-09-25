@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search, Users, FileText, CheckSquare, Vote, ArrowRight,
-  TrendingUp, Calendar, ChevronRight
+  TrendingUp, Calendar, ChevronRight, Network
 } from 'lucide-react';
 import { getStats, searchGlobal } from '../api/client';
 import { Avatar } from '../components/Avatar';
@@ -201,9 +201,11 @@ export const Home: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {searchResults.votacoes.map((v) => (
-                      <div
+                      <Link
                         key={v.id}
-                        className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between"
+                        to={`/votacoes/${v.id}`}
+                        aria-label={`Abrir votação: ${v.descricao}`}
+                        className="group bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between hover:border-slate-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 transition-all"
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-xs text-slate-500">
@@ -218,7 +220,7 @@ export const Home: React.FC = () => {
                             Sim: {v.placar_sim} | Não: {v.placar_nao}
                           </span>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -337,6 +339,27 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
+      <section className="rounded-2xl bg-slate-900 text-white p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
+          <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+            <Network className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wider font-semibold text-slate-300">Nova dimensão</div>
+            <h3 className="text-xl font-bold mt-1">Entenda o Governo</h3>
+            <p className="text-sm text-slate-300 mt-2 max-w-2xl">
+              Explore como União, estados, municípios, Poderes e instituições públicas se relacionam e conecte a Câmara diretamente aos dados legislativos.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/governo"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white text-slate-900 text-sm font-bold hover:bg-slate-100 shrink-0"
+        >
+          Explorar estrutura <ArrowRight className="w-4 h-4" />
+        </Link>
+      </section>
+
       {/* Grid com Votações Recentes e Proposições Movimentadas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Votações Recentes */}
@@ -353,9 +376,11 @@ export const Home: React.FC = () => {
               <CardSkeleton count={2} />
             ) : (
               stats?.votacoes_recentes?.map((v) => (
-                <div
+                <Link
                   key={v.id}
-                  className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3"
+                  to={`/votacoes/${v.id}`}
+                  aria-label={`Abrir votação: ${v.descricao}`}
+                  className="group block bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3 hover:border-slate-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 transition-all"
                 >
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span className="flex items-center gap-1">
@@ -385,7 +410,7 @@ export const Home: React.FC = () => {
                       {v.placar_abstencao > 0 && <span className="text-amber-700">Abst: {v.placar_abstencao}</span>}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>

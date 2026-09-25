@@ -4,10 +4,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas import (
     PageResponse, DeputadoSimple, DeputadoDetail, DeputadoGabinete,
-    DeputadoAtividade, AtividadeTemporalItem, DistribuicaoVotosItem,
+    DeputadoAtividade, DeputadoIndicadores, AtividadeTemporalItem, DistribuicaoVotosItem,
     DeputadoVotoItem, ProposicaoSimple, DeputadoHistoricoItem, DeputadoTrajetoriaResponse
 )
 from app import crud
+from app.services.camara.indicadores_service import IndicadoresService
 
 router = APIRouter(prefix="/api/deputados", tags=["Deputados"])
 
@@ -75,6 +76,18 @@ def get_deputado_atividade(id: int, db: Session = Depends(get_db)):
     if not dep:
         raise HTTPException(status_code=404, detail="Deputado não encontrado")
     return crud.get_deputado_atividade(db, id)
+
+@router.get("/{id}/indicadores", response_model=DeputadoIndicadores)
+def get_deputado_indicadores(
+    id: int,
+    ano: Optional[int] = Query(None, ge=2008, le=2100, description="Ano de referência para PLs e votações"),
+    mes: Optional[int] = Query(None, ge=1, le=12, description="Mês de referência para presença e cota"),
+    db: Session = Depends(get_db)
+):
+    dep = crud.get_deputado_by_id(db, id)
+    if not dep:
+        raise HTTPException(status_code=404, detail="Deputado não encontrado")
+    return IndicadoresService().get_indicadores(db, dep, ano=ano, mes=mes)
 
 @router.get("/{id}/temporal", response_model=list[AtividadeTemporalItem])
 def get_deputado_temporal(

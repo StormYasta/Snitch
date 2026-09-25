@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Database, ExternalLink, ShieldCheck } from 'lucide-react';
 
 interface FooterProps {
@@ -13,16 +14,14 @@ export const Footer: React.FC<FooterProps> = ({ ultimaSincronizacao }) => {
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-slate-400" />
             <span className="font-medium text-slate-700">Fonte dos Dados:</span>
-            <span>Câmara dos Deputados — Dados Abertos (API v2)</span>
-            <a
-              href="https://dadosabertos.camara.leg.br"
-              target="_blank"
-              rel="noreferrer"
+            <span>Câmara dos Deputados — Dados Abertos (API v2) • SIORG — Estrutura do Executivo Federal</span>
+            <Link
+              to="/fontes"
               className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900 underline ml-1"
             >
-              Portal Oficial
+              Ver todas as fontes e datas de acesso
               <ExternalLink className="w-3 h-3" />
-            </a>
+            </Link>
           </div>
 
           {ultimaSincronizacao && (

@@ -6,7 +6,7 @@ from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.models import Deputado
 from app.data.seed_data import load_seed_data
-from app.routers import deputados, proposicoes, votacoes, stats, busca, governo
+from app.routers import deputados, proposicoes, votacoes, stats, busca, governo, comparativo
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -17,10 +17,11 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # Se a base estiver vazia, carrega automaticamente os dados de amostra oficial
+        # Seed demonstrativo é opt-in. Em uso normal a base deve ser alimentada
+        # exclusivamente pelos comandos de sincronização com fontes oficiais.
         total_deputados = db.query(Deputado).count()
-        if total_deputados == 0:
-            logger.info("Base de dados vazia. Inicializando com amostra oficial da Câmara...")
+        if total_deputados == 0 and settings.load_demo_seed:
+            logger.warning("LOAD_DEMO_SEED ativo: carregando dados demonstrativos.")
             load_seed_data(db)
     except Exception as e:
         logger.error(f"Erro ao inicializar base de dados: {e}")
@@ -51,6 +52,7 @@ app.include_router(proposicoes.router)
 app.include_router(votacoes.router)
 app.include_router(busca.router)
 app.include_router(governo.router)
+app.include_router(comparativo.router)
 
 @app.get("/api/health", tags=["Health"])
 def health_check():

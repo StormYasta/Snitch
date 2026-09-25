@@ -73,6 +73,20 @@ class DeputadoAtividade(BaseModel):
         "profissional do parlamentar."
     )
 
+class DeputadoIndicadores(BaseModel):
+    ano_referencia: int
+    mes_referencia: int
+    presencas_plenario: Optional[int] = None
+    faltas_plenario: Optional[int] = None
+    faltas_justificadas: Optional[int] = None
+    faltas_nao_justificadas: Optional[int] = None
+    percentual_presenca: Optional[float] = None
+    pls_apresentados: int = 0
+    pls_aprovados: int = 0
+    percentual_pls_aprovados: float = 0.0
+    uso_cota_mes: Optional[float] = None
+    votacoes_nominais: int = 0
+
 class AtividadeTemporalItem(BaseModel):
     periodo: str  # "2024-01" or "2024"
     votos: int
@@ -109,6 +123,67 @@ class DeputadoVotoItem(BaseModel):
     proposicao_numero: Optional[int] = None
     proposicao_ano: Optional[int] = None
     proposicao_ementa: Optional[str] = None
+
+
+# ==================== COMPARATIVO DE DEPUTADOS ====================
+
+class ComparativoParlamentar(BaseModel):
+    id: int
+    nome_parlamentar: str
+    sigla_partido: Optional[str] = None
+    uf: Optional[str] = None
+    url_foto: Optional[str] = None
+    dados_demonstrativos: bool = False
+
+class ComparativoAtividade(BaseModel):
+    votos_registrados: int
+    votacoes_distintas: int
+    dias_com_atividade: int
+    presencas_eventos: int
+    proposicoes_autoria: int
+
+class ComparativoVotos(BaseModel):
+    sim: int = 0
+    nao: int = 0
+    abstencao: int = 0
+    obstrucao: int = 0
+    outros: int = 0
+
+class ComparativoTema(BaseModel):
+    id: int
+    nome: str
+    sim: int = 0
+    nao: int = 0
+    abstencao: int = 0
+    obstrucao: int = 0
+    outros: int = 0
+    total_registrado: int = 0
+    total_sim_nao: int = 0
+    percentual_sim: Optional[float] = None
+    percentual_nao: Optional[float] = None
+
+class ComparativoDeputado(BaseModel):
+    deputado: ComparativoParlamentar
+    atividade: ComparativoAtividade
+    votos: ComparativoVotos
+    temas: list[ComparativoTema] = []
+
+class ComparativoResponse(BaseModel):
+    ano: int
+    legislatura: Optional[int] = None
+    ultima_sincronizacao: Optional[datetime] = None
+    deputados: list[ComparativoDeputado]
+    nota_metodologica: str
+
+class VotacaoComparada(BaseModel):
+    id: int
+    camara_id: str
+    data_hora: Optional[str] = None
+    descricao: str
+    uri: Optional[str] = None
+    proposicao_id: Optional[int] = None
+    proposicao_nome: Optional[str] = None
+    votos: dict[str, str]
 
 # ==================== PROPOSICOES ====================
 

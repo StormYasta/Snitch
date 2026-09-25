@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from sqlalchemy.orm import Session
-from app.models import Deputado, DeputadoHistorico, utc_now
+from app.models import Deputado, DeputadoHistorico, Legislatura, Mandato, utc_now
 from app.services.camara.camara_client import CamaraClient
 
 logger = logging.getLogger(__name__)
@@ -65,25 +65,51 @@ class DeputadosService:
         db.flush()
         return deputado
 
-    def sync_deputados(self, db: Session, legislatura: int = 57, limite: int = 100) -> int:
-        """Sincroniza deputados da API oficial."""
+    def sync_deputados(self, db: Session, legislatura: int = 57, limite: Optional[int] = None) -> int:
+        """Sincroniza deputados da API oficial.
+
+        Sem limite explícito, percorre todas as páginas da legislatura.
+        """
         logger.info(f"Sincronizando deputados da legislatura {legislatura}...")
         params = {
             "idLegislatura": legislatura,
             "ordem": "ASC",
             "ordenarPor": "nome",
-            "itens": min(limite, 100),
         }
-        deputados_lista = self.client.get_deputados(params=params)
+        deputados_lista = self.client.get_deputados_all(params=params)
+        if limite is not None:
+            deputados_lista = deputados_lista[:limite]
         count = 0
 
-        for item in deputados_lista[:limite]:
+        legislatura_obj = db.query(Legislatura).filter(Legislatura.numero == legislatura).first()
+
+        for item in deputados_lista:
             dep_id = item["id"]
             try:
                 detalhe = self.client.get_deputado(dep_id)
                 raw = detalhe if detalhe else item
                 dep = self.upsert_deputado(db, raw)
                 count += 1
+
+                if legislatura_obj:
+                    mandato = db.query(Mandato).filter(
+                        Mandato.deputado_id == dep.id,
+                        Mandato.legislatura_numero == legislatura
+                    ).first()
+                    if not mandato:
+                        mandato = Mandato(
+                            deputado_id=dep.id,
+                            legislatura_id=legislatura_obj.id,
+                            legislatura_numero=legislatura,
+                            cargo="Deputado Federal"
+                        )
+                        db.add(mandato)
+                    mandato.sigla_partido = dep.sigla_partido
+                    mandato.uf = dep.uf
+                    mandato.situacao = dep.situacao
+                    mandato.condicao_eleitoral = dep.condicao_eleitoral
+                    mandato.data_inicio = legislatura_obj.data_inicio
+                    mandato.data_fim = legislatura_obj.data_fim
 
                 # Sincroniza histórico
                 try:

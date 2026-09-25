@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Search, Building2, FileText, Users, Home, Menu, X } from 'lucide-react';
+import { Search, Building2, FileText, Users, Home, Menu, X, Network, Database, GitCompareArrows } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +57,14 @@ export const Navbar: React.FC = () => {
               <Users className="w-4 h-4" />
               Deputados
             </NavLink>
+            <NavLink to="/comparar" className={navLinkClass}>
+              <GitCompareArrows className="w-4 h-4" />
+              Comparar
+            </NavLink>
+            <NavLink to="/governo" className={navLinkClass}>
+              <Network className="w-4 h-4" />
+              Entenda o Governo
+            </NavLink>
           </nav>
 
           {/* Busca rápida e badge */}
@@ -71,10 +79,20 @@ export const Navbar: React.FC = () => {
               />
               <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2 pointer-events-none" />
             </form>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 select-none">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <NavLink
+              to="/fontes"
+              title="Ver fontes e datas de acesso"
+              className={({ isActive }) =>
+                `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                  isActive
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 hover:text-slate-900'
+                }`
+              }
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Dados Oficiais
-            </span>
+            </NavLink>
           </div>
 
           {/* Botão Mobile */}
@@ -128,6 +146,30 @@ export const Navbar: React.FC = () => {
             >
               <Users className="w-4 h-4" />
               Deputados
+            </NavLink>
+            <NavLink
+              to="/comparar"
+              onClick={() => setMobileMenuOpen(false)}
+              className={navLinkClass}
+            >
+              <GitCompareArrows className="w-4 h-4" />
+              Comparar deputados
+            </NavLink>
+            <NavLink
+              to="/governo"
+              onClick={() => setMobileMenuOpen(false)}
+              className={navLinkClass}
+            >
+              <Network className="w-4 h-4" />
+              Entenda o Governo
+            </NavLink>
+            <NavLink
+              to="/fontes"
+              onClick={() => setMobileMenuOpen(false)}
+              className={navLinkClass}
+            >
+              <Database className="w-4 h-4" />
+              Fontes dos dados
             </NavLink>
           </div>
         </div>

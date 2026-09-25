@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Mail, Phone, MapPin, Calendar, Award,
   Info, TrendingUp, PieChart as PieIcon, History,
-  ExternalLink, HelpCircle, ChevronRight, Vote
+  ExternalLink, HelpCircle, ChevronRight, Vote,
+  Users, FileText, CheckCircle2, Receipt
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -13,7 +14,7 @@ import {
 import {
   getDeputado, getDeputadoAtividade, getDeputadoTemporal,
   getDeputadoDistribuicao, getDeputadoVotos, getDeputadoProposicoes,
-  getDeputadoHistorico
+  getDeputadoHistorico, getDeputadoTrajetoria, getDeputadoIndicadores
 } from '../api/client';
 import { Avatar } from '../components/Avatar';
 import { VoteBadge, StatusBadge } from '../components/Badge';
@@ -24,6 +25,7 @@ export const DeputadoPerfil: React.FC = () => {
   const depId = Number(id);
 
   const [agrupamentoTemporal, setAgrupamentoTemporal] = useState<'mes' | 'ano'>('mes');
+  const [legislaturaTemporal, setLegislaturaTemporal] = useState('');
   const [activePropTab, setActivePropTab] = useState<'autoria' | 'votacao'>('autoria');
   const [filtroVoto, setFiltroVoto] = useState('');
   const [votosPage, setVotosPage] = useState(1);
@@ -41,9 +43,19 @@ export const DeputadoPerfil: React.FC = () => {
     enabled: !isNaN(depId),
   });
 
+  const { data: indicadores, isLoading: indicadoresLoading } = useQuery({
+    queryKey: ['deputadoIndicadores', depId],
+    queryFn: () => getDeputadoIndicadores(depId),
+    enabled: !isNaN(depId),
+  });
+
   const { data: temporal } = useQuery({
-    queryKey: ['deputadoTemporal', depId, agrupamentoTemporal],
-    queryFn: () => getDeputadoTemporal(depId, agrupamentoTemporal),
+    queryKey: ['deputadoTemporal', depId, agrupamentoTemporal, legislaturaTemporal],
+    queryFn: () => getDeputadoTemporal(
+      depId,
+      agrupamentoTemporal,
+      legislaturaTemporal ? Number(legislaturaTemporal) : undefined
+    ),
     enabled: !isNaN(depId),
   });
 
@@ -75,6 +87,12 @@ export const DeputadoPerfil: React.FC = () => {
     enabled: !isNaN(depId),
   });
 
+  const { data: trajetoria } = useQuery({
+    queryKey: ['deputadoTrajetoria', depId],
+    queryFn: () => getDeputadoTrajetoria(depId),
+    enabled: !isNaN(depId),
+  });
+
   if (depLoading || ativLoading) {
     return <DetailSkeleton />;
   }
@@ -95,6 +113,14 @@ export const DeputadoPerfil: React.FC = () => {
       </div>
     );
   }
+
+  const formatCurrency = (value?: number | null) => {
+    if (value == null) return '—';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
 
   // Cores neutras para gráfico de pizza de votos
   const PIE_COLORS: Record<string, string> = {
@@ -188,6 +214,105 @@ export const DeputadoPerfil: React.FC = () => {
         </div>
       </div>
 
+      {/* INDICADORES LEGISLATIVOS */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+          <h2 className="text-lg font-bold text-slate-900">Indicadores Legislativos</h2>
+          <span className="text-xs text-slate-500">Dados públicos da Câmara dos Deputados</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-indigo-600 mb-3">
+              <Users className="w-4 h-4" />
+              <span className="text-xs font-semibold">Presença no Plenário</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              {indicadoresLoading
+                ? '—'
+                : indicadores?.percentual_presenca != null
+                  ? `${indicadores.percentual_presenca.toFixed(1)}%`
+                  : '—'}
+            </div>
+            {indicadores?.presencas_plenario != null && indicadores?.faltas_plenario != null ? (
+              <>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {indicadores.presencas_plenario} presenças • {indicadores.faltas_plenario} faltas
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {indicadores.faltas_justificadas ?? 0} justificadas • {indicadores.faltas_nao_justificadas ?? 0} não justificadas
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] text-slate-400 mt-1">Frequência oficial indisponível</p>
+            )}
+            <p className="text-[10px] text-slate-400 mt-2">
+              {String(indicadores?.mes_referencia ?? new Date().getMonth() + 1).padStart(2, '0')}/{indicadores?.ano_referencia ?? new Date().getFullYear()}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-amber-600 mb-3">
+              <FileText className="w-4 h-4" />
+              <span className="text-xs font-semibold">PLs Apresentados</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              {indicadoresLoading ? '—' : indicadores?.pls_apresentados ?? 0}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              em {indicadores?.ano_referencia ?? new Date().getFullYear()}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-emerald-600 mb-3">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="text-xs font-semibold">PLs Aprovados</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              {indicadoresLoading ? '—' : indicadores?.pls_aprovados ?? 0}
+            </div>
+            <p className="text-[11px] text-emerald-600 mt-1">
+              {indicadores?.pls_apresentados
+                ? `Taxa registrada: ${indicadores.percentual_pls_aprovados.toFixed(1)}%`
+                : 'Sem PLs apresentados no período'}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-rose-500 mb-3">
+              <Receipt className="w-4 h-4" />
+              <span className="text-xs font-semibold">Uso da Cota</span>
+            </div>
+            <div className="text-xl md:text-2xl font-extrabold text-slate-900">
+              {indicadoresLoading ? '—' : formatCurrency(indicadores?.uso_cota_mes)}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">no mês de referência</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center gap-2 text-violet-600 mb-3">
+              <Vote className="w-4 h-4" />
+              <span className="text-xs font-semibold">Votações Nominais</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold text-slate-900">
+              {indicadoresLoading ? '—' : indicadores?.votacoes_nominais ?? 0}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              com voto registrado em {indicadores?.ano_referencia ?? new Date().getFullYear()}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 flex items-start gap-2.5">
+          <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+          <span>
+            Presença e cota são consultadas nas fontes oficiais da Câmara. PLs e votações usam os registros sincronizados no Snitch.
+            Quando uma fonte externa não responde, o indicador é exibido como “—” em vez de assumir valor zero.
+          </span>
+        </div>
+      </section>
+
       {/* 10. & 11. CARDS DE ATIVIDADE OBJETIVA */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -276,23 +401,41 @@ export const DeputadoPerfil: React.FC = () => {
               <h3 className="text-base font-bold text-slate-900">Atividade ao Longo do Tempo</h3>
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs self-start sm:self-auto">
-              <button
-                onClick={() => setAgrupamentoTemporal('mes')}
-                className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
-                  agrupamentoTemporal === 'mes' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Por Mês
-              </button>
-              <button
-                onClick={() => setAgrupamentoTemporal('ano')}
-                className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
-                  agrupamentoTemporal === 'ano' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Por Ano
-              </button>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              {trajetoria?.mandatos && trajetoria.mandatos.length > 1 && (
+                <select
+                  value={legislaturaTemporal}
+                  onChange={(e) => setLegislaturaTemporal(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700"
+                >
+                  <option value="">Toda a trajetória</option>
+                  {trajetoria.mandatos
+                    .filter((m) => m.legislatura_numero)
+                    .map((m) => (
+                      <option key={m.id} value={m.legislatura_numero}>
+                        {m.legislatura_numero}ª Legislatura
+                      </option>
+                    ))}
+                </select>
+              )}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs">
+                <button
+                  onClick={() => setAgrupamentoTemporal('mes')}
+                  className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                    agrupamentoTemporal === 'mes' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Por Mês
+                </button>
+                <button
+                  onClick={() => setAgrupamentoTemporal('ano')}
+                  className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                    agrupamentoTemporal === 'ano' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Por Ano
+                </button>
+              </div>
             </div>
           </div>
 
@@ -430,8 +573,15 @@ export const DeputadoPerfil: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="self-end md:self-center shrink-0">
+                <div className="self-end md:self-center shrink-0 text-right">
                   <VoteBadge tipo={v.tipo_voto} />
+                  {(v.sigla_partido_momento || v.uf_momento) && (
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      {v.sigla_partido_momento || 'Partido não informado'}
+                      {v.uf_momento ? ` • ${v.uf_momento}` : ''}
+                      {' '}na data do voto
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -516,7 +666,45 @@ export const DeputadoPerfil: React.FC = () => {
         )}
       </section>
 
-      {/* 16. HISTÓRICO PARLAMENTAR */}
+      {/* 16. TRAJETÓRIA PARLAMENTAR */}
+      {trajetoria && trajetoria.mandatos.length > 0 && (
+        <section className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs space-y-5">
+          <div className="flex items-center gap-2">
+            <History className="w-5 h-5 text-slate-700" />
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Trajetória Parlamentar</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Mandatos preservados por legislatura; partido e UF são apresentados no contexto registrado para cada período.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {trajetoria.mandatos.map((m) => (
+              <div key={m.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-bold text-sm text-slate-900">
+                    {m.legislatura_numero ? `${m.legislatura_numero}ª Legislatura` : m.cargo}
+                  </div>
+                  {m.sigla_partido && (
+                    <span className="text-[11px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded">
+                      {m.sigla_partido}{m.uf ? ` • ${m.uf}` : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500 mt-2">
+                  {m.data_inicio ? m.data_inicio.substring(0, 10) : 'Início não informado'}
+                  {' → '}
+                  {m.data_fim ? m.data_fim.substring(0, 10) : 'atual'}
+                </div>
+                {m.situacao && <div className="text-xs text-slate-600 mt-2">{m.situacao}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Registros detalhados fornecidos pelo endpoint histórico da Câmara */}
       {historico && historico.length > 0 && (
         <section className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs space-y-5">
           <div className="flex items-center gap-2">

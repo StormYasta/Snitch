@@ -5,7 +5,7 @@ import {
   Users, Search, Filter,
   ChevronLeft, ChevronRight, ArrowUpDown
 } from 'lucide-react';
-import { getDeputados } from '../api/client';
+import { getDeputados, getLegislaturas } from '../api/client';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/Badge';
 import { CardSkeleton } from '../components/Skeleton';
@@ -16,16 +16,23 @@ export const Deputados: React.FC = () => {
   const [partido, setPartido] = useState('');
   const [uf, setUf] = useState('');
   const [situacao, setSituacao] = useState('');
+  const [legislatura, setLegislatura] = useState('');
   const [ordem, setOrdem] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
 
+  const { data: legislaturas } = useQuery({
+    queryKey: ['legislaturas'],
+    queryFn: getLegislaturas,
+  });
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['deputados', { busca, partido, uf, situacao, ordem, page }],
+    queryKey: ['deputados', { busca, partido, uf, situacao, legislatura, ordem, page }],
     queryFn: () => getDeputados({
       busca: busca.trim() || undefined,
       partido: partido || undefined,
       uf: uf || undefined,
       situacao: situacao || undefined,
+      legislatura: legislatura ? Number(legislatura) : undefined,
       ordenar_por: 'nome',
       ordem,
       page,
@@ -38,6 +45,7 @@ export const Deputados: React.FC = () => {
     setPartido('');
     setUf('');
     setSituacao('');
+    setLegislatura('');
     setOrdem('asc');
     setPage(1);
   };
@@ -60,7 +68,7 @@ export const Deputados: React.FC = () => {
           Deputados Federais
         </h1>
         <p className="text-slate-600 text-sm max-w-3xl">
-          Consulte o perfil dos parlamentares da 57ª Legislatura da Câmara dos Deputados, com métricas objetivas de atuação, histórico de votos e proposições de autoria.
+          Consulte parlamentares atuais e históricos da Câmara dos Deputados, filtre por legislatura e acompanhe votos, autoria e trajetória parlamentar com dados oficiais.
         </p>
       </div>
 
@@ -71,7 +79,7 @@ export const Deputados: React.FC = () => {
             <Filter className="w-4 h-4 text-slate-500" />
             Filtros de Parlamentares
           </div>
-          {(busca || partido || uf || situacao) && (
+          {(busca || partido || uf || situacao || legislatura) && (
             <button
               onClick={handleResetFilters}
               className="text-xs font-medium text-slate-500 hover:text-slate-900 underline cursor-pointer"
@@ -81,7 +89,7 @@ export const Deputados: React.FC = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Busca textual */}
           <div className="relative sm:col-span-2">
             <input
@@ -127,6 +135,22 @@ export const Deputados: React.FC = () => {
               <option value="">Todos os estados (UF)</option>
               {estadosBrasil.map((e) => (
                 <option key={e} value={e}>{e}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Legislatura */}
+          <div>
+            <select
+              value={legislatura}
+              onChange={(e) => { setLegislatura(e.target.value); setPage(1); }}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+            >
+              <option value="">Todas as legislaturas</option>
+              {legislaturas?.map((leg) => (
+                <option key={leg.id} value={leg.numero}>
+                  {leg.numero}ª {leg.ano_inicio && leg.ano_fim ? `(${leg.ano_inicio}–${leg.ano_fim})` : ''}
+                </option>
               ))}
             </select>
           </div>
