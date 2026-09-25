@@ -204,7 +204,11 @@ function IndicatorSection({
         makeRow('PLs aprovados (situação registrada)', 'pls_aprovados'),
         makeRow('Taxa de aprovação registrada', 'percentual_pls_aprovados', prettyPercent,
           'Entre os PLs apresentados no ano, conforme situação na base local'),
-        makeRow('Uso da cota (valor líquido)', 'uso_cota_mes', prettyMoney),
+        { label: 'Estado do dado de presença', values: deputies.map((item) =>
+          indicators[item.deputado.id]?.fontes?.presencas?.status || '—') },
+                makeRow('Uso da cota (valor líquido)', 'uso_cota_mes', prettyMoney),
+        { label: 'Estado do dado de cota', values: deputies.map((item) =>
+          indicators[item.deputado.id]?.fontes?.despesas?.status || '—') },
         makeRow('Votações nominais registradas', 'votacoes_nominais'),
       ]}
     />

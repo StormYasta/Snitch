@@ -62,6 +62,13 @@ export interface DeputadoAtividade {
   nota_metodologica: string;
 }
 
+export interface FonteIndicador {
+  status: 'atualizado' | 'cache' | 'desatualizado' | 'indisponivel';
+  fonte: string;
+  consultado_em?: string | null;
+  expira_em?: string | null;
+}
+
 export interface DeputadoIndicadores {
   ano_referencia: number;
   mes_referencia: number;
@@ -75,6 +82,7 @@ export interface DeputadoIndicadores {
   percentual_pls_aprovados: number;
   uso_cota_mes?: number | null;
   votacoes_nominais: number;
+  fontes?: Record<string, FonteIndicador>;
 }
 
 

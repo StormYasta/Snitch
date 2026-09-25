@@ -249,6 +249,14 @@ export const DeputadoPerfil: React.FC = () => {
             <p className="text-[10px] text-slate-400 mt-2">
               {String(indicadores?.mes_referencia ?? new Date().getMonth() + 1).padStart(2, '0')}/{indicadores?.ano_referencia ?? new Date().getFullYear()}
             </p>
+            {indicadores?.fontes?.presencas?.status === 'desatualizado' && (
+              <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                Consulta temporariamente indisponível; último registro válido:{' '}
+                {indicadores.fontes.presencas.consultado_em
+                  ? new Date(indicadores.fontes.presencas.consultado_em).toLocaleString('pt-BR')
+                  : 'sem data'}.
+              </p>
+            )}
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
@@ -288,6 +296,14 @@ export const DeputadoPerfil: React.FC = () => {
               {indicadoresLoading ? '—' : formatCurrency(indicadores?.uso_cota_mes)}
             </div>
             <p className="text-[11px] text-slate-400 mt-1">no mês de referência</p>
+            {indicadores?.fontes?.despesas?.status === 'desatualizado' && (
+              <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                Último registro válido:{' '}
+                {indicadores.fontes.despesas.consultado_em
+                  ? new Date(indicadores.fontes.despesas.consultado_em).toLocaleString('pt-BR')
+                  : 'sem data'}.
+              </p>
+            )}
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
