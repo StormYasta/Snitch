@@ -195,3 +195,12 @@ def test_comparativo_votacoes_comuns(client):
     for votacao in payload["items"]:
         assert set(votacao["votos"]) == set(map(str, ids))
         assert all(value != "Sem registro" for value in votacao["votos"].values())
+
+
+def test_source_status_and_protected_sync(client):
+    status = client.get("/api/fontes/status")
+    assert status.status_code == 200
+    assert "cache" in status.json()
+    assert "sincronizacoes" in status.json()
+    unauthorized = client.post("/api/sync/trigger?tipo=seed")
+    assert unauthorized.status_code == 403

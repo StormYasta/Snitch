@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getFontesStatus } from '../api/client';
+import type { SourceCategory } from '../data/sources';
 import { CalendarDays, Database, ExternalLink, Search, ShieldCheck } from 'lucide-react';
 import { officialSources, SOURCES_LAST_REVIEW } from '../data/sources';
 
@@ -12,6 +15,34 @@ const categoryOrder = [
 
 export function Fontes() {
   const [query, setQuery] = useState('');
+  const { data: live } = useQuery({
+    queryKey: ['fontes-status'],
+    queryFn: getFontesStatus,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+
+  const lastQuery = (category: SourceCategory): string | null => {
+    if (!live) return null;
+    if (category === 'Presença parlamentar') {
+      return live.cache.find((item) => item.fonte === 'presencas')?.ultimo_acesso || null;
+    }
+    const candidates: string[] = [];
+    if (category === 'Dados legislativos') {
+      candidates.push(...live.cache.filter((item) => item.fonte === 'despesas')
+        .map((item) => item.ultimo_acesso).filter((item): item is string => !!item));
+      candidates.push(...live.sincronizacoes.filter((item) =>
+        ['deputados', 'proposicoes', 'votacoes', 'historico', 'all'].includes(item.tipo) &&
+        item.status === 'SUCCESS'
+      ).map((item) => item.finalizado_em).filter((item): item is string => !!item));
+    }
+    if (category === 'Estrutura organizacional') {
+      candidates.push(...live.sincronizacoes.filter((item) =>
+        ['siorg', 'estrutura_governo', 'mvp2'].includes(item.tipo) && item.status === 'SUCCESS'
+      ).map((item) => item.finalizado_em).filter((item): item is string => !!item));
+    }
+    return candidates.length ? candidates.sort().at(-1) || null : null;
+  };
 
   const filteredSources = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('pt-BR');
@@ -132,8 +163,18 @@ export function Fontes() {
                     <div className="flex shrink-0 flex-col items-start gap-2 lg:items-end">
                       <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-500">
                         <CalendarDays className="h-3.5 w-3.5" />
-                        Acesso: <strong className="font-semibold text-slate-700">{source.accessedAt}</strong>
+                        Link conferido: <strong className="font-semibold text-slate-700">{source.accessedAt}</strong>
                       </div>
+                      {source.category !== 'Base constitucional' && source.category !== 'Referência institucional' && (
+                        <div className="text-[11px] text-slate-500 lg:text-right">
+                          Consulta do Snitch:{' '}
+                          <strong className="font-semibold text-slate-700">
+                            {lastQuery(source.category)
+                              ? new Date(lastQuery(source.category)!).toLocaleString('pt-BR')
+                              : live ? 'Ainda não registrada' : 'Indisponível'}
+                          </strong>
+                        </div>
+                      )}
                       <a
                         href={source.url}
                         target="_blank"
@@ -162,7 +203,9 @@ export function Fontes() {
         <strong className="text-slate-800">Sobre a data de acesso:</strong>{' '}
         ela registra quando o endereço da fonte foi conferido para esta versão do projeto. Não é a data
         de publicação do conteúdo nem, necessariamente, a data da última atualização realizada pelo órgão.
-        As páginas individuais de instituições continuam exibindo seus próprios links oficiais quando disponíveis.
+        A data de "consulta do Snitch" é obtida dos registros efetivos de sincronização e cache
+        quando o backend está disponível. As páginas individuais de instituições continuam
+        exibindo seus próprios links oficiais quando disponíveis.
       </section>
     </div>
   );

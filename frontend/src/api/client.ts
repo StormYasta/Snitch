@@ -5,6 +5,7 @@ import type {
   DeputadoDetail,
   DeputadoAtividade,
   DeputadoIndicadores,
+  FonteStatusResponse,
   ComparativoResponse,
   ComparativoFiltro,
   VotacaoComparada,
@@ -228,5 +229,11 @@ export async function getComparativoVotacoes(
       page: filters.page, page_size: filters.page_size ?? 12,
     },
   });
+  return data;
+}
+
+
+export async function getFontesStatus(): Promise<FonteStatusResponse> {
+  const { data } = await api.get<FonteStatusResponse>('/fontes/status');
   return data;
 }

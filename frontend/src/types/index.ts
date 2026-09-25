@@ -431,3 +431,18 @@ export interface EstruturaGovernoGraph {
   edges: EstruturaGovernoEdge[];
   legenda: Record<string, string>;
 }
+
+
+export interface FonteStatusResponse {
+  cache: Array<{
+    fonte: string;
+    ultimo_acesso: string | null;
+    registros_em_cache: number;
+  }>;
+  sincronizacoes: Array<{
+    tipo: string;
+    status: string;
+    finalizado_em: string | null;
+    registros_processados: number;
+  }>;
+}
