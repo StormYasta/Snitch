@@ -268,7 +268,9 @@ export interface VotoDeputadoItem {
   camara_id: number;
   nome_parlamentar: string;
   sigla_partido?: string;
+  sigla_partido_momento?: string;
   uf?: string;
+  uf_momento?: string;
   url_foto?: string;
   tipo_voto: string;
   data_hora?: string;
