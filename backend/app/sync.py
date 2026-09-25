@@ -44,6 +44,7 @@ def run_sync(
     sync_run_id = sync_run.id
 
     total_processados = 0
+    historico_service = None
 
     try:
         if tipo in ["seed"]:
@@ -70,7 +71,8 @@ def run_sync(
             total_processados += service.sync_eventos(db)
 
         elif tipo in ["historico"]:
-            total_processados += HistoricoLegislativoService().sync_periodo(
+            historico_service = HistoricoLegislativoService()
+            total_processados += historico_service.sync_periodo(
                 db,
                 ano_inicial=ano_inicial or 2018,
                 ano_final=ano_final or date.today().year,
@@ -148,6 +150,8 @@ def run_sync(
         # Depois de um erro SQL a sessão fica inutilizável até executar rollback.
         # O registro de auditoria é escrito em uma transação independente.
         db.rollback()
+        if historico_service is not None:
+            total_processados += historico_service.concluidos
         try:
             with SessionLocal() as audit_db:
                 run = audit_db.get(SyncRun, sync_run_id)

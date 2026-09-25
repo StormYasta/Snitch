@@ -205,6 +205,8 @@ O seed contém fixtures demonstrativas e deve permanecer separado de bases usada
 /proposicoes/:id
 /deputados
 /deputados/:id
+/votacoes/:id
+/comparar
 /governo
 /governo/instituicoes/:id
 /fontes
