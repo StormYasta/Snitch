@@ -168,7 +168,9 @@ class CamaraClient:
         return res.get("dados")
 
     def get_votacao_votos(self, id: str) -> list[dict[str, Any]]:
-        return self.get_paginated(f"/votacoes/{id}/votos")
+        # Endpoint de detalhe sem parâmetros de paginação: retorna todos os votos.
+        res = self.get(f"/votacoes/{id}/votos")
+        return res.get("dados", []) or []
 
     def get_votacao_orientacoes(self, id: str) -> list[dict[str, Any]]:
         res = self.get(f"/votacoes/{id}/orientacoes")
@@ -184,7 +186,9 @@ class CamaraClient:
         return res.get("dados")
 
     def get_evento_deputados(self, id: int) -> list[dict[str, Any]]:
-        return self.get_paginated(f"/eventos/{id}/deputados")
+        # Recurso de detalhe sem paginação documentada.
+        res = self.get(f"/eventos/{id}/deputados")
+        return res.get("dados", []) or []
 
     def get_evento_votacoes(self, id: int) -> list[dict[str, Any]]:
         res = self.get(f"/eventos/{id}/votacoes")
