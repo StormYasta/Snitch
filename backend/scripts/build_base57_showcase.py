@@ -213,6 +213,12 @@ def fetch_voting_bundle(
 def choose_year(year: int, selected_ids: set[int]) -> list[dict]:
     rows = download_csv("votacoes", year)
     rows = [row for row in rows if voting_id(row)]
+    if year == 2023:
+        # A 57ª Legislatura começou em 01/02/2023; janeiro ainda pertence à 56ª.
+        rows = [
+            row for row in rows
+            if (voting_date(row)[:10] or "9999-99-99") >= "2023-02-01"
+        ]
     rows.sort(key=lambda row: (voting_date(row), voting_id(row) or ""))
 
     object_rows = download_csv("votacoesObjetos", year, optional=True)
