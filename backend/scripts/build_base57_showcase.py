@@ -62,8 +62,6 @@ def list_votings(year: int) -> list[dict]:
             {
                 "dataInicio": f"{year}-01-01",
                 "dataFim": end,
-                "ordem": "ASC",
-                "ordenarPor": "dataHoraRegistro",
                 "pagina": page,
                 "itens": 100,
             },
