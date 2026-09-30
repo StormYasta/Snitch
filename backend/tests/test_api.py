@@ -195,3 +195,20 @@ def test_comparativo_votacoes_comuns(client):
     for votacao in payload["items"]:
         assert set(votacao["votos"]) == set(map(str, ids))
         assert all(value != "Sem registro" for value in votacao["votos"].values())
+
+
+def test_offline_snapshot_loads_100_official_profiles():
+    from app.database import SessionLocal
+    from app.data.offline_deputies import load_offline_deputies, SNAPSHOT_PATH
+    from app.models import Deputado
+    import json
+
+    payload = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    ids = [row["id"] for row in payload["dados"]]
+    assert len(ids) == 100
+    assert len(set(ids)) == 100
+
+    with SessionLocal() as db:
+        assert load_offline_deputies(db) == 100
+        loaded = db.query(Deputado).filter(Deputado.camara_id.in_(ids)).count()
+        assert loaded == 100
