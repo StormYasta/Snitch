@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: base57-offline-showcase
+  cancel-in-progress: true
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest
