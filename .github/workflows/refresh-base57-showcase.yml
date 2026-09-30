@@ -19,7 +19,7 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,8 +41,8 @@ jobs:
           assert data["_meta"]["legislatura"] == 57
           assert len(data["deputados"]) == 100
           assert len({d["id"] for d in data["deputados"]}) == 100
-          assert len(data["votacoes"]) >= 40
-          assert sum(len(v["votos"]) for v in data["votacoes"]) > 1000
+          assert len(data["votacoes"]) >= 30
+          assert sum(len(v["votos"]) for v in data["votacoes"]) > 300
           print(json.dumps(data["_meta"], ensure_ascii=False, indent=2))
           PY
       - name: Commit snapshot to branch
