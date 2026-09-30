@@ -38,7 +38,7 @@ jobs:
           PY
       - name: Commit snapshot to branch
         run: |
-          if git diff --quiet -- backend/app/data/deputados_offline_100.json; then
+          if [[ -z "$(git status --porcelain -- backend/app/data/deputados_offline_100.json)" ]]; then
             echo "Snapshot unchanged."
             exit 0
           fi
