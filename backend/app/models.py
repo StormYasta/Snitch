@@ -41,7 +41,7 @@ class Deputado(Base):
     url_foto = Column(String(500), nullable=True)
     situacao = Column(String(100), index=True, nullable=True)
     condicao_eleitoral = Column(String(100), nullable=True)
-    descricao_status = Column(String(255), nullable=True)
+    descricao_status = Column(Text, nullable=True)
     email = Column(String(255), nullable=True)
     legislatura = Column(Integer, index=True, nullable=True)
     gabinete_predio = Column(String(50), nullable=True)
@@ -115,7 +115,7 @@ class DeputadoHistorico(Base):
     sigla_partido = Column(String(50), nullable=True)
     situacao = Column(String(100), nullable=True)
     condicao_eleitoral = Column(String(100), nullable=True)
-    descricao_status = Column(String(255), nullable=True)
+    descricao_status = Column(Text, nullable=True)
     legislatura = Column(Integer, nullable=True)
 
     deputado = relationship("Deputado", back_populates="historicos")

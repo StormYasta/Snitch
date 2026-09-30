@@ -1,0 +1,58 @@
+name: Refresh 57th Legislature offline indicators
+
+on:
+  push:
+    branches: ["feat/mvp2-governo-historico"]
+    paths:
+      - ".github/workflows/refresh-indicadores57.yml"
+      - "backend/scripts/build_indicadores57_offline.py"
+      - "backend/app/data/deputados_offline_100.json"
+      - "backend/app/data/base57_showcase.json.gz"
+  workflow_dispatch:
+  schedule:
+    - cron: "23 5 2 * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: indicadores57-offline
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mvp2-governo-historico
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build official legislative indicators
+        run: python backend/scripts/build_indicadores57_offline.py
+      - name: Validate indicator snapshot
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("backend/app/data/indicadores57_offline.json").read_text(encoding="utf-8"))
+          assert data["_meta"]["legislatura"] == 57
+          assert "2026" in data["anos"]
+          current = data["_meta"]["monthly_snapshot"]
+          assert current in data["meses"]
+          assert len(data["meses"][current]["deputados"]) >= 80
+          print(json.dumps(data["_meta"], ensure_ascii=False, indent=2))
+          PY
+      - name: Commit indicator snapshot
+        run: |
+          if [[ -z "$(git status --porcelain -- backend/app/data/indicadores57_offline.json)" ]]; then
+            echo "Snapshot unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/app/data/indicadores57_offline.json
+          git commit -m "data: refresh 57th Legislature offline indicators [skip ci]"
+          git push origin HEAD:feat/mvp2-governo-historico

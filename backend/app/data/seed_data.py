@@ -359,8 +359,8 @@ FILIACOES_SEED = [
 ]
 
 def load_seed_data(db: Session) -> dict:
-    """Popula o banco de dados com uma amostra rica e 100% autêntica de registros oficiais."""
-    logger.info("Iniciando carga de dados da amostra oficial da Câmara e do Governo...")
+    """Popula o banco com dados demonstrativos para desenvolvimento e testes. Não usar como fonte oficial."""
+    logger.info("Iniciando carga de dados demonstrativos para desenvolvimento/testes...")
 
     # 0. Legislaturas
     legislaturas_map = {}
@@ -448,7 +448,10 @@ def load_seed_data(db: Session) -> dict:
                 sigla_partido=fil_dict["sigla_partido"],
                 nome_partido=fil_dict["nome_partido"],
                 data_inicio=fil_dict["data_inicio"],
-                data_fim=fil_dict["data_fim"]
+                data_fim=fil_dict["data_fim"],
+                fonte="Dados demonstrativos"
+            ))
+
     db.flush()
 
     # 2. Temas oficiais
@@ -1059,7 +1062,7 @@ def load_seed_data(db: Session) -> dict:
     db.add(sync_run)
     db.commit()
 
-    logger.info("Carga da amostra oficial e estrutura de governo finalizada com sucesso!")
+    logger.info("Carga demonstrativa e estrutura de governo finalizada com sucesso!")
     return {
         "deputados": len(DEPUTADOS_SEED),
         "proposicoes": len(PROPOSICOES_SEED),

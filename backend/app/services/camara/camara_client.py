@@ -58,10 +58,64 @@ class CamaraClient:
 
         raise CamaraClientError(f"Erro ao consultar {clean_endpoint} após {self.max_retries} tentativas: {last_error}")
 
+    def iter_paginated_pages(
+        self,
+        endpoint: str,
+        params: Optional[dict[str, Any]] = None,
+        page_size: int = 100,
+        max_pages: Optional[int] = None,
+    ):
+        """Itera por páginas sem manter uma listagem histórica inteira em memória."""
+        page = 1
+        base_params = dict(params or {})
+        page_size = max(1, min(page_size, 100))
+
+        while True:
+            current_params = {**base_params, "pagina": page, "itens": page_size}
+            payload = self.get(endpoint, params=current_params)
+            dados = payload.get("dados", []) or []
+            if not isinstance(dados, list):
+                raise CamaraClientError(
+                    f"Resposta inesperada em {endpoint} página {page}: dados não é lista."
+                )
+            if not dados:
+                break
+            yield page, dados
+
+            links = payload.get("links", []) or []
+            has_next = any(
+                (link.get("rel") or "").lower() == "next"
+                for link in links if isinstance(link, dict)
+            )
+            if not has_next or (max_pages is not None and page >= max_pages):
+                break
+            page += 1
+
+    def get_paginated(
+        self,
+        endpoint: str,
+        params: Optional[dict[str, Any]] = None,
+        page_size: int = 100,
+        max_pages: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
+        """Agrega páginas para endpoints de detalhe com volume moderado."""
+        return [
+            item for _, dados in self.iter_paginated_pages(
+                endpoint, params, page_size, max_pages
+            )
+            for item in dados
+        ]
+
     # Deputados
     def get_deputados(self, params: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
         res = self.get("/deputados", params=params)
         return res.get("dados", []) or []
+
+    def get_deputados_all(self, params: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
+        return self.get_paginated("/deputados", params=params, page_size=100)
+
+    def get_legislaturas(self, params: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
+        return self.get_paginated("/legislaturas", params=params, page_size=100)
 
     def get_deputado(self, id: int) -> Optional[dict[str, Any]]:
         res = self.get(f"/deputados/{id}")
@@ -114,6 +168,7 @@ class CamaraClient:
         return res.get("dados")
 
     def get_votacao_votos(self, id: str) -> list[dict[str, Any]]:
+        # Endpoint de detalhe sem parâmetros de paginação: retorna todos os votos.
         res = self.get(f"/votacoes/{id}/votos")
         return res.get("dados", []) or []
 
@@ -131,6 +186,7 @@ class CamaraClient:
         return res.get("dados")
 
     def get_evento_deputados(self, id: int) -> list[dict[str, Any]]:
+        # Recurso de detalhe sem paginação documentada.
         res = self.get(f"/eventos/{id}/deputados")
         return res.get("dados", []) or []
 

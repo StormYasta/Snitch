@@ -4,6 +4,10 @@ import type {
   DeputadoSimple,
   DeputadoDetail,
   DeputadoAtividade,
+  DeputadoIndicadores,
+  ComparativoResponse,
+  ComparativoFiltro,
+  VotacaoComparada,
   AtividadeTemporalItem,
   DistribuicaoVotosItem,
   DeputadoVotoItem,
@@ -15,7 +19,12 @@ import type {
   VotacaoDetail,
   VotoDeputadoItem,
   StatsResponse,
-  GlobalSearchResult
+  GlobalSearchResult,
+  DeputadoTrajetoria,
+  LegislaturaItem,
+  InstituicaoSimple,
+  InstituicaoDetail,
+  EstruturaGovernoGraph
 } from '../types';
 
 const api = axios.create({
@@ -60,8 +69,24 @@ export async function getDeputadoAtividade(id: number): Promise<DeputadoAtividad
   return data;
 }
 
-export async function getDeputadoTemporal(id: number, agrupamento: 'mes' | 'ano' = 'mes'): Promise<AtividadeTemporalItem[]> {
-  const { data } = await api.get<AtividadeTemporalItem[]>(`/deputados/${id}/temporal`, { params: { agrupamento } });
+export async function getDeputadoIndicadores(
+  id: number, params?: { ano?: number; mes?: number }
+): Promise<DeputadoIndicadores> {
+  const { data } = await api.get<DeputadoIndicadores>(`/deputados/${id}/indicadores`, {
+    params, timeout: 40000,
+  });
+  return data;
+}
+
+export async function getDeputadoTemporal(
+  id: number,
+  agrupamento: 'mes' | 'ano' = 'mes',
+  legislatura?: number,
+  ano?: number
+): Promise<AtividadeTemporalItem[]> {
+  const { data } = await api.get<AtividadeTemporalItem[]>(`/deputados/${id}/temporal`, {
+    params: { agrupamento, legislatura, ano }
+  });
   return data;
 }
 
@@ -95,6 +120,16 @@ export async function getDeputadoEventos(id: number): Promise<any[]> {
 
 export async function getDeputadoHistorico(id: number): Promise<DeputadoHistoricoItem[]> {
   const { data } = await api.get<DeputadoHistoricoItem[]>(`/deputados/${id}/historico`);
+  return data;
+}
+
+export async function getDeputadoTrajetoria(id: number): Promise<DeputadoTrajetoria> {
+  const { data } = await api.get<DeputadoTrajetoria>(`/deputados/${id}/trajetoria`);
+  return data;
+}
+
+export async function getLegislaturas(): Promise<LegislaturaItem[]> {
+  const { data } = await api.get<LegislaturaItem[]>('/legislaturas');
   return data;
 }
 
@@ -143,5 +178,55 @@ export async function getVotacaoVotos(id: number, params: {
   page_size?: number;
 }): Promise<PageResponse<VotoDeputadoItem>> {
   const { data } = await api.get<PageResponse<VotoDeputadoItem>>(`/votacoes/${id}/votos`, { params });
+  return data;
+}
+
+
+// Entenda o Governo
+export async function getEstruturaGoverno(): Promise<EstruturaGovernoGraph> {
+  const { data } = await api.get<EstruturaGovernoGraph>('/governo/estrutura');
+  return data;
+}
+
+export async function getInstituicoes(params: {
+  esfera?: string;
+  poder?: string;
+  tipo?: string;
+  nivel_federativo?: string;
+  busca?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<PageResponse<InstituicaoSimple>> {
+  const { data } = await api.get<PageResponse<InstituicaoSimple>>('/governo/instituicoes', { params });
+  return data;
+}
+
+export async function searchInstituicoes(q: string): Promise<InstituicaoSimple[]> {
+  const { data } = await api.get<InstituicaoSimple[]>('/governo/busca', { params: { q } });
+  return data;
+}
+
+export async function getInstituicao(id: number): Promise<InstituicaoDetail> {
+  const { data } = await api.get<InstituicaoDetail>(`/governo/instituicoes/${id}`);
+  return data;
+}
+
+
+export async function getComparativo(filters: ComparativoFiltro): Promise<ComparativoResponse> {
+  const { data } = await api.get<ComparativoResponse>('/comparativo/deputados', {
+    params: { ids: filters.ids.join(','), ano: filters.ano, legislatura: filters.legislatura },
+  });
+  return data;
+}
+
+export async function getComparativoVotacoes(
+  filters: ComparativoFiltro & { page: number; page_size?: number }
+): Promise<PageResponse<VotacaoComparada>> {
+  const { data } = await api.get<PageResponse<VotacaoComparada>>('/comparativo/votacoes', {
+    params: {
+      ids: filters.ids.join(','), ano: filters.ano, legislatura: filters.legislatura,
+      page: filters.page, page_size: filters.page_size ?? 12,
+    },
+  });
   return data;
 }

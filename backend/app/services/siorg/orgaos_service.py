@@ -178,105 +178,147 @@ class OrgaosService:
         self.client = client or SiorgClient()
 
     def sync_orgaos_executivo(self, db: Session, use_live_siorg: bool = True) -> int:
-        """Sincroniza os Ministérios e órgãos federais com SIORG e dados canônicos."""
+        """Sincroniza o Executivo Federal usando o SIORG como fonte de enriquecimento.
+
+        Mantém os órgãos de primeiro nível necessários para navegação e, quando a
+        API oficial está disponível, importa dinamicamente unidades subordinadas
+        até dois níveis abaixo dos ministérios.
+        """
         logger.info("Sincronizando órgãos do Executivo Federal com dados do SIORG...")
 
-        # 1. Obtém o nó da Presidência da República no banco
-        presidencia = db.query(Instituicao).filter(Instituicao.codigo_externo == "PRESIDENCIA_REPUBLICA").first()
+        presidencia = db.query(Instituicao).filter(
+            Instituicao.codigo_externo == "PRESIDENCIA_REPUBLICA"
+        ).first()
         if not presidencia:
-            logger.warning("Presidência da República não encontrada no banco. Sincronize a estrutura canônica primeiro.")
+            logger.warning(
+                "Presidência da República não encontrada no banco. "
+                "Sincronize a estrutura canônica primeiro."
+            )
             return 0
 
-        # Tenta carregar dados do SIORG para enriquecer códigos e nomes oficiais
         siorg_unidades = []
         if use_live_siorg:
             try:
                 siorg_unidades = self.client.fetch_unidades()
-            except Exception as e:
-                logger.warning(f"Não foi possível carregar dados online do SIORG: {e}")
+            except Exception as exc:
+                logger.warning("Não foi possível carregar dados online do SIORG: %s", exc)
+
+        def clean(value):
+            return str(value).strip() if value is not None else ""
 
         siorg_by_sigla = {}
         siorg_by_nome = {}
-        for u in siorg_unidades:
-            sig = (u.get("sigla") or "").strip().upper()
-            nom = (u.get("nome") or "").strip().upper()
+        siorg_by_codigo = {}
+        for unit in siorg_unidades:
+            sig = clean(unit.get("sigla")).upper()
+            nome = clean(unit.get("nome")).upper()
+            codigo = clean(unit.get("codigoUnidade"))
             if sig:
-                siorg_by_sigla[sig] = u
-            if nom:
-                siorg_by_nome[nom] = u
+                siorg_by_sigla[sig] = unit
+            if nome:
+                siorg_by_nome[nome] = unit
+            if codigo:
+                siorg_by_codigo[codigo] = unit
 
         count = 0
         ministerios_db = {}
+        siorg_code_to_inst = {}
 
-        # 2. Sincroniza Ministérios de Estado
+        # Ministérios e órgãos de primeiro escalão. A lista serve apenas como
+        # conjunto de âncoras de navegação; nome/código são enriquecidos pelo SIORG.
         for min_data in MINISTERIOS_DESTAQUE:
             sigla = min_data["sigla"]
             nome = min_data["nome"]
-            siorg_unit = siorg_by_sigla.get(sigla.upper()) or siorg_by_nome.get(nome.upper())
+            siorg_unit = (
+                siorg_by_sigla.get(sigla.upper())
+                or siorg_by_nome.get(nome.upper())
+            )
+            codigo_siorg = clean(siorg_unit.get("codigoUnidade")) if siorg_unit else ""
+            cod_externo = f"SIORG:{codigo_siorg}" if codigo_siorg else f"SIORG_MIN_{sigla}"
 
-            cod_externo = siorg_unit.get("codigoUnidade") if siorg_unit else f"SIORG_MIN_{sigla}"
-
-            inst = db.query(Instituicao).filter(Instituicao.sigla == sigla, Instituicao.esfera == "Federal").first()
+            inst = db.query(Instituicao).filter(
+                Instituicao.sigla == sigla,
+                Instituicao.esfera == "Federal",
+            ).first()
             if not inst:
                 inst = Instituicao(
-                    nome=siorg_unit.get("nome", nome) if siorg_unit else nome,
+                    nome=(siorg_unit.get("nome") if siorg_unit else None) or nome,
                     sigla=sigla,
-                    tipo="MINISTERIO",
+                    tipo="MINISTERIO" if sigla != "CGU" else "ORGAO",
                     poder="Executivo",
                     esfera="Federal",
                     nivel_federativo="União",
                     codigo_externo=cod_externo,
-                    natureza_juridica=min_data.get("natureza", "Administração Direta Federal"),
-                    descricao=f"Órgão de primeiro escalão do Poder Executivo federal, auxiliando o Presidente da República.",
-                    site_oficial=f"https://www.gov.br/{sigla.lower()}",
+                    natureza_juridica=min_data.get(
+                        "natureza", "Administração Direta Federal"
+                    ),
+                    descricao=(
+                        "Órgão de primeiro nível do Poder Executivo Federal. "
+                        "Estrutura organizacional enriquecida a partir do SIORG."
+                    ),
                     fonte="SIORG / Ministério da Gestão e da Inovação",
-                    ativo=True
+                    url_fonte="https://estruturaorganizacional.dados.gov.br",
+                    ativo=True,
+                    dados_raw=siorg_unit.get("_raw") if siorg_unit else None,
                 )
                 db.add(inst)
             else:
-                inst.nome = nome
-                inst.tipo = "MINISTERIO"
+                inst.nome = (siorg_unit.get("nome") if siorg_unit else None) or nome
+                inst.tipo = "MINISTERIO" if sigla != "CGU" else "ORGAO"
                 inst.poder = "Executivo"
                 inst.esfera = "Federal"
                 inst.nivel_federativo = "União"
                 inst.codigo_externo = cod_externo
+                inst.fonte = "SIORG / Ministério da Gestão e da Inovação"
+                inst.url_fonte = "https://estruturaorganizacional.dados.gov.br"
+                inst.dados_raw = siorg_unit.get("_raw") if siorg_unit else inst.dados_raw
                 inst.updated_at = utc_now()
 
             db.flush()
             ministerios_db[sigla] = inst
+            if codigo_siorg:
+                siorg_code_to_inst[codigo_siorg] = inst
             count += 1
 
-            # Relação com Presidência da República: HIERARQUIA_ADMINISTRATIVA
             rel_pr = db.query(RelacaoInstitucional).filter(
                 RelacaoInstitucional.instituicao_origem_id == inst.id,
                 RelacaoInstitucional.instituicao_destino_id == presidencia.id,
-                RelacaoInstitucional.tipo_relacao == "HIERARQUIA_ADMINISTRATIVA"
+                RelacaoInstitucional.tipo_relacao == "HIERARQUIA_ADMINISTRATIVA",
             ).first()
-
             if not rel_pr:
-                db.add(RelacaoInstitucional(
-                    instituicao_origem_id=inst.id,
-                    instituicao_destino_id=presidencia.id,
-                    tipo_relacao="HIERARQUIA_ADMINISTRATIVA",
-                    descricao="Subordinação hierárquica e administrativa direta à Chefia do Poder Executivo da União",
-                    fonte="SIORG / CF/88 Art. 76"
-                ))
+                db.add(
+                    RelacaoInstitucional(
+                        instituicao_origem_id=inst.id,
+                        instituicao_destino_id=presidencia.id,
+                        tipo_relacao="HIERARQUIA_ADMINISTRATIVA",
+                        descricao="Órgão de primeiro nível do Poder Executivo Federal.",
+                        fonte="SIORG",
+                        url_fonte="https://estruturaorganizacional.dados.gov.br",
+                    )
+                )
 
-        # 3. Sincroniza Entidades Vinculadas (Autarquias, Fundações) e Secretarias
+        # Entidades públicas relevantes para o MVP. Quando há correspondência,
+        # o SIORG substitui os identificadores e metadados locais.
         for ent in ENTIDADES_VINCULADAS:
             sigla = ent["sigla"]
             nome = ent["nome"]
             tipo = ent["tipo"]
-            min_sigla = ent["ministerio_sigla"]
-            ministerio_inst = ministerios_db.get(min_sigla)
+            ministerio_inst = ministerios_db.get(ent["ministerio_sigla"])
 
-            siorg_unit = siorg_by_sigla.get(sigla.upper()) or siorg_by_nome.get(nome.upper())
-            cod_externo = siorg_unit.get("codigoUnidade") if siorg_unit else f"SIORG_ENT_{sigla}"
+            siorg_unit = (
+                siorg_by_sigla.get(sigla.upper())
+                or siorg_by_nome.get(nome.upper())
+            )
+            codigo_siorg = clean(siorg_unit.get("codigoUnidade")) if siorg_unit else ""
+            cod_externo = f"SIORG:{codigo_siorg}" if codigo_siorg else f"SIORG_ENT_{sigla}"
 
-            inst = db.query(Instituicao).filter(Instituicao.sigla == sigla, Instituicao.esfera == "Federal").first()
+            inst = db.query(Instituicao).filter(
+                Instituicao.sigla == sigla,
+                Instituicao.esfera == "Federal",
+            ).first()
             if not inst:
                 inst = Instituicao(
-                    nome=nome,
+                    nome=(siorg_unit.get("nome") if siorg_unit else None) or nome,
                     sigla=sigla,
                     tipo=tipo,
                     poder="Executivo",
@@ -285,48 +327,141 @@ class OrgaosService:
                     codigo_externo=cod_externo,
                     natureza_juridica=ent.get("natureza_juridica"),
                     descricao=ent.get("descricao"),
-                    site_oficial=f"https://www.gov.br/{sigla.lower()}",
                     fonte="SIORG / dados.gov.br",
-                    ativo=True
+                    url_fonte="https://estruturaorganizacional.dados.gov.br",
+                    ativo=True,
+                    dados_raw=siorg_unit.get("_raw") if siorg_unit else None,
                 )
                 db.add(inst)
             else:
-                inst.nome = nome
+                inst.nome = (siorg_unit.get("nome") if siorg_unit else None) or nome
                 inst.sigla = sigla
                 inst.tipo = tipo
+                inst.codigo_externo = cod_externo
                 inst.descricao = ent.get("descricao")
                 inst.natureza_juridica = ent.get("natureza_juridica")
+                inst.fonte = "SIORG / dados.gov.br"
+                inst.url_fonte = "https://estruturaorganizacional.dados.gov.br"
+                inst.dados_raw = siorg_unit.get("_raw") if siorg_unit else inst.dados_raw
                 inst.updated_at = utc_now()
 
             db.flush()
+            if codigo_siorg:
+                siorg_code_to_inst[codigo_siorg] = inst
             count += 1
 
-            # Relação com o Ministério:
-            # - Se Secretaria: HIERARQUIA_ADMINISTRATIVA
-            # - Se Autarquia ou Fundação: VINCULACAO (Decreto-Lei 200/1967, art. 19: supervisão ministerial)
             if ministerio_inst:
-                tipo_rel = "HIERARQUIA_ADMINISTRATIVA" if tipo == "SECRETARIA" else "VINCULACAO"
-                desc_rel = (
-                    "Subordinação hierárquica e administrativa interna ao Ministério"
+                tipo_rel = (
+                    "HIERARQUIA_ADMINISTRATIVA"
                     if tipo == "SECRETARIA"
-                    else f"Supervisão ministerial e vinculação administrativa (Art. 19 do DL 200/1967) ao {ministerio_inst.nome}"
+                    else "VINCULACAO"
                 )
-
                 rel_min = db.query(RelacaoInstitucional).filter(
                     RelacaoInstitucional.instituicao_origem_id == inst.id,
                     RelacaoInstitucional.instituicao_destino_id == ministerio_inst.id,
-                    RelacaoInstitucional.tipo_relacao == tipo_rel
+                    RelacaoInstitucional.tipo_relacao == tipo_rel,
                 ).first()
-
                 if not rel_min:
-                    db.add(RelacaoInstitucional(
-                        instituicao_origem_id=inst.id,
-                        instituicao_destino_id=ministerio_inst.id,
-                        tipo_relacao=tipo_rel,
-                        descricao=desc_rel,
-                        fonte="SIORG / Decreto-Lei 200/1967"
-                    ))
+                    db.add(
+                        RelacaoInstitucional(
+                            instituicao_origem_id=inst.id,
+                            instituicao_destino_id=ministerio_inst.id,
+                            tipo_relacao=tipo_rel,
+                            descricao=(
+                                "Subordinação interna ao ministério."
+                                if tipo == "SECRETARIA"
+                                else "Entidade vinculada ao ministério conforme cadastro oficial."
+                            ),
+                            fonte="SIORG",
+                            url_fonte="https://estruturaorganizacional.dados.gov.br",
+                        )
+                    )
+
+        # Importa unidades filhas reais do SIORG. Fazemos duas passagens para
+        # trazer secretarias/departamentos sem despejar toda a árvore federal no MVP.
+        pending = list(siorg_unidades)
+        for _depth in range(2):
+            next_pending = []
+            for unit in pending:
+                codigo = clean(unit.get("codigoUnidade"))
+                parent_code = clean(unit.get("codigoUnidadePai"))
+                if not codigo or codigo in siorg_code_to_inst:
+                    continue
+
+                parent_inst = siorg_code_to_inst.get(parent_code)
+                if not parent_inst:
+                    next_pending.append(unit)
+                    continue
+
+                nome = clean(unit.get("nome"))
+                if not nome:
+                    continue
+                sigla = clean(unit.get("sigla")) or None
+                upper_name = nome.upper()
+                if "SECRETARIA" in upper_name:
+                    tipo = "SECRETARIA"
+                elif "DEPARTAMENTO" in upper_name:
+                    tipo = "DEPARTAMENTO"
+                elif "GABINETE" in upper_name:
+                    tipo = "ORGAO"
+                else:
+                    tipo = "OUTRO"
+
+                codigo_externo = f"SIORG:{codigo}"
+                inst = db.query(Instituicao).filter(
+                    Instituicao.codigo_externo == codigo_externo
+                ).first()
+                if not inst:
+                    inst = Instituicao(
+                        nome=nome,
+                        sigla=sigla,
+                        tipo=tipo,
+                        poder="Executivo",
+                        esfera="Federal",
+                        nivel_federativo="União",
+                        codigo_externo=codigo_externo,
+                        descricao=unit.get("competencia") or unit.get("finalidade"),
+                        fonte="SIORG",
+                        url_fonte="https://estruturaorganizacional.dados.gov.br",
+                        ativo=True,
+                        dados_raw=unit.get("_raw"),
+                    )
+                    db.add(inst)
+                else:
+                    inst.nome = nome
+                    inst.sigla = sigla
+                    inst.tipo = tipo
+                    inst.descricao = unit.get("competencia") or unit.get("finalidade")
+                    inst.dados_raw = unit.get("_raw")
+                    inst.updated_at = utc_now()
+
+                db.flush()
+                siorg_code_to_inst[codigo] = inst
+                count += 1
+
+                rel = db.query(RelacaoInstitucional).filter(
+                    RelacaoInstitucional.instituicao_origem_id == inst.id,
+                    RelacaoInstitucional.instituicao_destino_id == parent_inst.id,
+                    RelacaoInstitucional.tipo_relacao == "HIERARQUIA_ADMINISTRATIVA",
+                ).first()
+                if not rel:
+                    db.add(
+                        RelacaoInstitucional(
+                            instituicao_origem_id=inst.id,
+                            instituicao_destino_id=parent_inst.id,
+                            tipo_relacao="HIERARQUIA_ADMINISTRATIVA",
+                            descricao="Relação hierárquica registrada no SIORG.",
+                            fonte="SIORG",
+                            url_fonte="https://estruturaorganizacional.dados.gov.br",
+                            dados_raw={
+                                "codigoUnidade": codigo,
+                                "codigoUnidadePai": parent_code,
+                            },
+                        )
+                    )
+
+            pending = next_pending
 
         db.commit()
-        logger.info(f"{count} ministérios e entidades vinculadas sincronizados com sucesso.")
+        logger.info("%s instituições do Executivo sincronizadas.", count)
         return count

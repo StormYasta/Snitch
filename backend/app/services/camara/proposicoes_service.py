@@ -129,35 +129,52 @@ class ProposicoesService:
         for item in proposicoes_lista[:limite]:
             prop_id = item["id"]
             try:
+                # Consultas HTTP antes da escrita: transações mais curtas.
                 detalhe = self.client.get_proposicao(prop_id)
                 raw = detalhe if detalhe else item
+
+                def optional_fetch(label: str, fetcher):
+                    try:
+                        return fetcher(prop_id)
+                    except Exception as exc:
+                        logger.warning(
+                            "Não foi possível buscar %s da proposição %s: %s",
+                            label, prop_id, exc,
+                        )
+                        return None
+
+                autores = optional_fetch("autores", self.client.get_proposicao_autores)
+                temas = optional_fetch("temas", self.client.get_proposicao_temas)
+                tramitacoes = optional_fetch(
+                    "tramitações", self.client.get_proposicao_tramitacoes
+                )
+
                 prop = self.upsert_proposicao(db, raw)
+                for label, data, updater in (
+                    ("autores", autores, self.sync_autores),
+                    ("temas", temas, self.sync_temas),
+                    ("tramitações", tramitacoes, self.sync_tramitacoes),
+                ):
+                    if data is None:
+                        continue
+                    try:
+                        # Uma falha nesta associação não invalida o registro principal.
+                        with db.begin_nested():
+                            updater(db, prop, data)
+                    except Exception:
+                        logger.exception(
+                            "Falha ao registrar %s da proposição %s; "
+                            "mantendo os registros anteriores.",
+                            label, prop_id,
+                        )
+
+                db.commit()
                 count += 1
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "Falha ao processar proposição %s; prosseguindo.", prop_id
+                )
 
-                # Autores
-                try:
-                    autores = self.client.get_proposicao_autores(prop_id)
-                    self.sync_autores(db, prop, autores)
-                except Exception as ea:
-                    logger.warning(f"Erro ao buscar autores da proposição {prop_id}: {ea}")
-
-                # Temas
-                try:
-                    temas = self.client.get_proposicao_temas(prop_id)
-                    self.sync_temas(db, prop, temas)
-                except Exception as et:
-                    logger.warning(f"Erro ao buscar temas da proposição {prop_id}: {et}")
-
-                # Tramitações
-                try:
-                    tramitacoes = self.client.get_proposicao_tramitacoes(prop_id)
-                    self.sync_tramitacoes(db, prop, tramitacoes)
-                except Exception as etr:
-                    logger.warning(f"Erro ao buscar tramitações da proposição {prop_id}: {etr}")
-
-            except Exception as e:
-                logger.error(f"Erro ao processar proposição {prop_id}: {e}")
-
-        db.commit()
         logger.info(f"{count} proposições sincronizadas com sucesso.")
         return count

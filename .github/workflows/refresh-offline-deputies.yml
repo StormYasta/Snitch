@@ -1,0 +1,49 @@
+name: Refresh offline deputies snapshot
+
+on:
+  push:
+    branches: ["feat/mvp2-governo-historico"]
+    paths:
+      - ".github/workflows/refresh-offline-deputies.yml"
+      - "backend/scripts/build_offline_deputies.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mvp2-governo-historico
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch 100 official deputies
+        run: |
+          python backend/scripts/build_offline_deputies.py             --output backend/app/data/deputados_offline_100.json
+      - name: Validate snapshot
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("backend/app/data/deputados_offline_100.json")
+          data = json.loads(p.read_text(encoding="utf-8"))
+          assert len(data["dados"]) == 100
+          ids = [row["id"] for row in data["dados"]]
+          assert len(set(ids)) == 100
+          print(data["_meta"])
+          PY
+      - name: Commit snapshot to branch
+        run: |
+          if [[ -z "$(git status --porcelain -- backend/app/data/deputados_offline_100.json)" ]]; then
+            echo "Snapshot unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/app/data/deputados_offline_100.json
+          git commit -m "data: refresh 100 official deputies offline snapshot [skip ci]"
+          git push origin HEAD:feat/mvp2-governo-historico
