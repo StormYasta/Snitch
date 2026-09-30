@@ -35,49 +35,74 @@ def get_json(url: str, attempts: int = 4) -> dict:
 
 
 def build(limit: int = 100, legislatura: int = 57) -> dict:
-    query = urlencode(
-        {
-            "idLegislatura": legislatura,
-            "itens": limit,
-            "ordem": "ASC",
-            "ordenarPor": "nome",
-        }
-    )
-    listing_url = f"{API}/deputados?{query}"
-    listing = get_json(listing_url).get("dados") or []
-    if len(listing) != limit:
+    # A listagem por legislatura pode repetir o mesmo parlamentar em mais de
+    # um registro de exercício. Percorremos páginas e deduplicamos por ID
+    # oficial antes de escolher os 100 primeiros nomes distintos.
+    unique_items: list[dict] = []
+    seen_ids: set[int] = set()
+    page = 1
+    source_urls: list[str] = []
+
+    while len(unique_items) < limit and page <= 20:
+        query = urlencode(
+            {
+                "idLegislatura": legislatura,
+                "itens": 100,
+                "pagina": page,
+                "ordem": "ASC",
+                "ordenarPor": "nome",
+            }
+        )
+        listing_url = f"{API}/deputados?{query}"
+        source_urls.append(listing_url)
+        batch = get_json(listing_url).get("dados") or []
+        if not batch:
+            break
+
+        for item in batch:
+            dep_id = item.get("id")
+            if dep_id is None or dep_id in seen_ids:
+                continue
+            seen_ids.add(dep_id)
+            unique_items.append(item)
+            if len(unique_items) == limit:
+                break
+
+        if len(batch) < 100:
+            break
+        page += 1
+
+    if len(unique_items) != limit:
         raise RuntimeError(
-            f"A API retornou {len(listing)} registros; eram esperados {limit}."
+            f"A API forneceu somente {len(unique_items)} IDs distintos; "
+            f"eram esperados {limit}."
         )
 
     rows = []
-    for index, item in enumerate(listing, start=1):
-        dep_id = item.get("id")
-        if not dep_id:
-            raise RuntimeError(f"Item {index} sem ID oficial.")
+    for index, item in enumerate(unique_items, start=1):
+        dep_id = item["id"]
         detail = get_json(f"{API}/deputados/{dep_id}").get("dados") or {}
         if not detail:
-            # O item da listagem ainda é um registro oficial válido e contém
-            # os dados básicos usados na tela de deputados.
             detail = item
         rows.append(detail)
         print(f"[{index:03d}/{limit}] {detail.get('nomeCivil') or detail.get('nome') or dep_id}")
 
     ids = [row.get("id") for row in rows]
     if len(set(ids)) != limit or any(value is None for value in ids):
-        raise RuntimeError("A seleção contém IDs ausentes ou duplicados.")
+        raise RuntimeError("O snapshot final contém IDs ausentes ou duplicados.")
 
     return {
         "_meta": {
-            "source": listing_url,
+            "source": source_urls,
             "source_documentation": "https://dadosabertos.camara.leg.br/swagger/api.html",
             "retrieved_at": datetime.now(timezone.utc).isoformat(),
             "legislatura": legislatura,
             "count": limit,
             "selection": (
-                "Primeiros 100 registros retornados pela API oficial para a "
-                "57ª Legislatura, em ordem alfabética pelo parâmetro ordenarPor=nome. "
-                "É uma amostra de desenvolvimento, não uma amostra representativa."
+                "Primeiros 100 parlamentares com IDs oficiais distintos retornados "
+                "pela API da 57ª Legislatura, preservando a ordenação alfabética "
+                "solicitada por ordenarPor=nome. É uma amostra de desenvolvimento, "
+                "não uma amostra representativa."
             ),
         },
         "dados": rows,
