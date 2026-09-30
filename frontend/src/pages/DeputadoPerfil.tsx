@@ -218,6 +218,14 @@ export const DeputadoPerfil: React.FC = () => {
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
           <h2 className="text-lg font-bold text-slate-900">Indicadores Legislativos</h2>
+          {indicadores?.fonte_offline && (
+            <p className="mt-1 text-[11px] text-amber-700">
+              Parte dos indicadores usa snapshot oficial offline
+              {indicadores.snapshot_acesso
+                ? ` · acesso ${new Date(indicadores.snapshot_acesso).toLocaleDateString('pt-BR')}`
+                : ''}.
+            </p>
+          )}
           <span className="text-xs text-slate-500">Dados públicos da Câmara dos Deputados</span>
         </div>
 

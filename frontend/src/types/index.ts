@@ -75,6 +75,9 @@ export interface DeputadoIndicadores {
   percentual_pls_aprovados: number;
   uso_cota_mes?: number | null;
   votacoes_nominais: number;
+  fonte_offline?: boolean;
+  snapshot_acesso?: string | null;
+  cobertura_votacoes?: 'base_local' | 'amostra_offline';
 }
 
 

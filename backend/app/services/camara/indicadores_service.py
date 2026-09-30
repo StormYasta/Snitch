@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Deputado, Proposicao, ProposicaoAutor, Votacao, Voto
 from app.services.camara.camara_client import CamaraClient
+from app.data.indicadores57_offline import get_offline_indicators
 
 logger = logging.getLogger(__name__)
 
@@ -261,6 +262,13 @@ class IndicadoresService:
         pls_apresentados = len(pls)
         pls_aprovados = sum(1 for proposicao in pls if self._proposicao_aprovada(proposicao))
 
+        offline = get_offline_indicators(deputado.camara_id, ano_ref, mes_ref)
+        offline_year = offline.get("ano") or {}
+        if offline_year:
+            # O snapshot por autor/ano é mais completo que a amostra local.
+            pls_apresentados = int(offline_year.get("pls_apresentados") or 0)
+            pls_aprovados = int(offline_year.get("pls_aprovados_situacao") or 0)
+
         votacoes_nominais = (
             db.query(func.count(distinct(Voto.votacao_id)))
             .join(Votacao, Voto.votacao_id == Votacao.id)
@@ -284,6 +292,26 @@ class IndicadoresService:
         presencas = self._buscar_presencas(deputado.camara_id, ano_ref, mes_ref)
         uso_cota = self._buscar_cota(deputado.camara_id, ano_ref, mes_ref)
 
+        offline_month = offline.get("mes") or {}
+        if not any(value is not None for value in presencas.values()) and offline_month:
+            presencas = {
+                "presencas_plenario": offline_month.get("presencas_plenario"),
+                "faltas_plenario": offline_month.get("faltas_plenario"),
+                "faltas_justificadas": offline_month.get("faltas_justificadas"),
+                "faltas_nao_justificadas": offline_month.get("faltas_nao_justificadas"),
+                "percentual_presenca": offline_month.get("percentual_presenca"),
+            }
+        if uso_cota is None and offline_month:
+            uso_cota = offline_month.get("uso_cota_mes")
+
+        offline_votes = offline.get("votacoes_amostra")
+        cobertura_votacoes = "base_local"
+        if int(votacoes_nominais) == 0 and offline_votes is not None:
+            votacoes_nominais = int(offline_votes)
+            cobertura_votacoes = "amostra_offline"
+
+        fonte_offline = bool(offline_year or offline_month or offline_votes is not None)
+
         return {
             "ano_referencia": ano_ref,
             "mes_referencia": mes_ref,
@@ -293,4 +321,7 @@ class IndicadoresService:
             "percentual_pls_aprovados": percentual_pls,
             "uso_cota_mes": uso_cota,
             "votacoes_nominais": int(votacoes_nominais),
+            "fonte_offline": fonte_offline,
+            "snapshot_acesso": offline.get("mes_retrieved_at") or offline.get("retrieved_at"),
+            "cobertura_votacoes": cobertura_votacoes,
         }

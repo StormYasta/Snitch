@@ -86,6 +86,9 @@ class DeputadoIndicadores(BaseModel):
     percentual_pls_aprovados: float = 0.0
     uso_cota_mes: Optional[float] = None
     votacoes_nominais: int = 0
+    fonte_offline: bool = False
+    snapshot_acesso: Optional[datetime] = None
+    cobertura_votacoes: str = "base_local"
 
 class AtividadeTemporalItem(BaseModel):
     periodo: str  # "2024-01" or "2024"

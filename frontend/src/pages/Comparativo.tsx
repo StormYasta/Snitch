@@ -192,7 +192,7 @@ function IndicatorSection({
   });
   return (
     <MetricTable title="Indicadores legislativos"
-      subtitle={`PLs e votações: ${ano}. Presença e cota: ${String(mes).padStart(2, '0')}/${ano}.`}
+      subtitle={`PLs e votações: ${ano}. Presença e cota: ${String(mes).padStart(2, '0')}/${ano}. “—” indica dado indisponível.`}
       deputies={deputies}
       rows={[
         makeRow('Presença no Plenário', 'percentual_presenca', prettyPercent),
@@ -205,7 +205,16 @@ function IndicatorSection({
         makeRow('Taxa de aprovação registrada', 'percentual_pls_aprovados', prettyPercent,
           'Entre os PLs apresentados no ano, conforme situação na base local'),
         makeRow('Uso da cota (valor líquido)', 'uso_cota_mes', prettyMoney),
-        makeRow('Votações nominais registradas', 'votacoes_nominais'),
+        {
+          label: 'Votações nominais registradas',
+          hint: deputies.some((item) => indicators[item.deputado.id]?.cobertura_votacoes === 'amostra_offline')
+            ? 'Alguns valores representam apenas a amostra offline carregada.'
+            : undefined,
+          values: deputies.map((item) => {
+            const source = indicators[item.deputado.id];
+            return source ? prettyNumber(source.votacoes_nominais) : '—';
+          }),
+        },
       ]}
     />
   );
