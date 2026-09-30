@@ -78,14 +78,12 @@ def build(limit: int = 100, legislatura: int = 57) -> dict:
             f"eram esperados {limit}."
         )
 
-    rows = []
-    for index, item in enumerate(unique_items, start=1):
-        dep_id = item["id"]
-        detail = get_json(f"{API}/deputados/{dep_id}").get("dados") or {}
-        if not detail:
-            detail = item
-        rows.append(detail)
-        print(f"[{index:03d}/{limit}] {detail.get('nomeCivil') or detail.get('nome') or dep_id}")
+    # Para a base offline usamos o retorno oficial da listagem. Ele já traz
+    # os campos necessários para cards e filtros (ID, nome, partido, UF, foto,
+    # legislatura, e-mail e URI), e evita 100 chamadas adicionais por execução.
+    rows = unique_items[:limit]
+    for index, item in enumerate(rows, start=1):
+        print(f"[{index:03d}/{limit}] {item.get('nome') or item.get('id')}")
 
     ids = [row.get("id") for row in rows]
     if len(set(ids)) != limit or any(value is None for value in ids):
@@ -100,8 +98,9 @@ def build(limit: int = 100, legislatura: int = 57) -> dict:
             "count": limit,
             "selection": (
                 "Primeiros 100 parlamentares com IDs oficiais distintos retornados "
-                "pela API da 57ª Legislatura, preservando a ordenação alfabética "
-                "solicitada por ordenarPor=nome. É uma amostra de desenvolvimento, "
+                "pela listagem da API da 57ª Legislatura, preservando a ordenação "
+                "alfabética solicitada por ordenarPor=nome. O snapshot contém os "
+                "campos básicos oficiais da listagem e é uma amostra de desenvolvimento, "
                 "não uma amostra representativa."
             ),
         },
