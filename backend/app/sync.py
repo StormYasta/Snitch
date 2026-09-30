@@ -15,6 +15,7 @@ from app.services.siorg.estrutura_service import EstruturaService
 from app.services.siorg.orgaos_service import OrgaosService
 from app.data.seed_data import load_seed_data
 from app.data.offline_deputies import load_offline_deputies
+from app.data.base57_offline import load_base57_offline
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -59,6 +60,11 @@ def run_sync(
 
         elif tipo in ["deputados_offline"]:
             total_processados += load_offline_deputies(db)
+
+        elif tipo in ["base57_offline"]:
+            result = load_base57_offline(db)
+            total_processados += sum(result.values())
+            logger.info("Base offline da 57ª Legislatura carregada: %s", result)
 
         elif tipo in ["proposicoes"]:
             service = ProposicoesService()
@@ -138,7 +144,7 @@ def run_sync(
         else:
             raise ValueError(
                 f"Comando de sincronização desconhecido: '{tipo}'. "
-                "Use: deputados, deputados_offline, proposicoes, votacoes, eventos, legislaturas, "
+                "Use: deputados, deputados_offline, base57_offline, proposicoes, votacoes, eventos, legislaturas, "
                 "deputados_historicos, enriquecer_deputados, historico, estrutura_governo, "
                 "siorg, mvp2, all ou seed."
             )

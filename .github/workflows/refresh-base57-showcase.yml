@@ -1,0 +1,54 @@
+name: Refresh 57th Legislature offline showcase
+
+on:
+  push:
+    branches: ["feat/mvp2-governo-historico"]
+    paths:
+      - ".github/workflows/refresh-base57-showcase.yml"
+      - "backend/scripts/build_base57_showcase.py"
+      - "backend/app/data/deputados_offline_100.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mvp2-governo-historico
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build official 57th Legislature snapshot
+        run: |
+          python backend/scripts/build_base57_showcase.py
+      - name: Validate snapshot
+        run: |
+          python - <<'PY'
+          import gzip, json
+          from pathlib import Path
+          p = Path("backend/app/data/base57_showcase.json.gz")
+          with gzip.open(p, "rt", encoding="utf-8") as fh:
+              data = json.load(fh)
+          assert data["_meta"]["legislatura"] == 57
+          assert len(data["deputados"]) == 100
+          assert len({d["id"] for d in data["deputados"]}) == 100
+          assert len(data["votacoes"]) >= 40
+          assert sum(len(v["votos"]) for v in data["votacoes"]) > 1000
+          print(json.dumps(data["_meta"], ensure_ascii=False, indent=2))
+          PY
+      - name: Commit snapshot to branch
+        run: |
+          if [[ -z "$(git status --porcelain -- backend/app/data/base57_showcase.json.gz)" ]]; then
+            echo "Snapshot unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/app/data/base57_showcase.json.gz
+          git commit -m "data: refresh 57th Legislature offline showcase [skip ci]"
+          git push origin HEAD:feat/mvp2-governo-historico
