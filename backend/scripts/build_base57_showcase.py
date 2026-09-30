@@ -212,7 +212,19 @@ def fetch_voting_bundle(
 
 def choose_year(year: int, selected_ids: set[int]) -> list[dict]:
     rows = download_csv("votacoes", year)
-    rows = [row for row in rows if voting_id(row)]
+    # Para comparação entre deputados, priorizamos votações do Plenário com
+    # registros individuais no placar. É um critério institucional/estrutural,
+    # não temático nem partidário, e evita viés por composição de comissões.
+    rows = [
+        row for row in rows
+        if voting_id(row)
+        and (field(row, "siglaOrgao") or "").upper() == "PLEN"
+        and (
+            (as_int(field(row, "votosSim")) or 0)
+            + (as_int(field(row, "votosNao")) or 0)
+            + (as_int(field(row, "votosOutros")) or 0)
+        ) > 0
+    ]
     if year == 2023:
         # A 57ª Legislatura começou em 01/02/2023; janeiro ainda pertence à 56ª.
         rows = [
@@ -330,7 +342,7 @@ def build(deputy_file: Path) -> dict:
             }),
             "deputy_selection": deputies_payload.get("_meta", {}).get("selection"),
             "voting_selection": (
-                "Até 20 votações por ano, espalhadas temporalmente. Uma votação só "
+                "Até 20 votações do Plenário por ano, espalhadas temporalmente. Uma votação só "
                 "entra quando há pelo menos cinco votos individuais registrados entre "
                 "os 100 perfis. Não há seleção por partido, parlamentar, tema, "
                 "resultado ou posição do voto."
